@@ -13,9 +13,6 @@ sys.path.insert(0, current_dir)
 backend_dir = os.path.join(current_dir, 'backend')
 sys.path.insert(0, backend_dir)
 
-# Change to backend directory
-os.chdir(backend_dir)
-
 if __name__ == "__main__":
     print("🚀 Starting Financial Modeling API...")
     print("📊 Backend will be available at: http://localhost:8000")
@@ -27,9 +24,8 @@ if __name__ == "__main__":
     
     # Import the FastAPI app from the backend directory
     # Since we added backend to sys.path, we can import directly
-    import importlib
-    backend_main = importlib.import_module('main')
-    app = backend_main.app
+    sys.path.insert(0, backend_dir)
+    from backend.main import app
     
     uvicorn.run(
         app,
