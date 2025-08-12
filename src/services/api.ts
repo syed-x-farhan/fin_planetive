@@ -7,8 +7,8 @@
 
 import { Variable, VariableSection } from '@/config/models/threeStatementConfig';
 
-// API Base URL - Uses environment variable or falls back to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// API Base URL - Update this to match your backend URL
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 /**
  * API Response Types
