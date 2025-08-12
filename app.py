@@ -25,7 +25,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 8000))
     
-    # Import the FastAPI app from backend
+    # Import the FastAPI app from the backend directory
     from main import app
     
     uvicorn.run(
