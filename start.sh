@@ -1,3 +1,2 @@
 #!/bin/bash
-cd backend
-python start.py
+python backend/start.py
