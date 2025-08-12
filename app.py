@@ -23,17 +23,12 @@ if __name__ == "__main__":
     if os.path.exists(backend_dir):
         print(f"Files in backend: {os.listdir(backend_dir)}")
     
-    # Check if we can find main.py in the backend directory
-    main_py_path = os.path.join(backend_dir, 'main.py')
+    # The backend files are in the root /app directory!
+    main_py_path = "/app/main.py"
     print(f"main.py exists at {main_py_path}: {os.path.exists(main_py_path)}")
     
-    # If backend files don't exist, list what's in /app
-    app_files = os.listdir('/app')
-    print(f"Files in /app: {app_files}")
-    
-    # Try direct import from backend subdirectory
+    # Import the FastAPI app from the root main.py
     try:
-        # Don't change directory, just import with full module path
         import importlib.util
         spec = importlib.util.spec_from_file_location("backend_main", main_py_path)
         if spec is None:
@@ -42,7 +37,7 @@ if __name__ == "__main__":
         sys.modules["backend_main"] = backend_main
         spec.loader.exec_module(backend_main)
         app = backend_main.app
-        print("✅ Successfully imported FastAPI app using importlib")
+        print("✅ Successfully imported FastAPI app from root main.py!")
     except Exception as e:
         print(f"❌ Failed to import app: {e}")
         raise
