@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Frontend Data</title>
+</head>
+<body>
+    <h1>Debug Frontend Data Structure</h1>
+    <p>Open browser console and check the localStorage data:</p>
+    
+    <script>
+        // Check what's in localStorage
+        const storedData = localStorage.getItem('historical_calculation_result');
+        
+        if (storedData) {
+            console.log('=== FRONTEND DATA DEBUG ===');
+            console.log('Raw localStorage data:', storedData);
+            
+            try {
+                const parsed = JSON.parse(storedData);
+                console.log('Parsed data type:', typeof parsed);
+                console.log('Parsed data keys:', Object.keys(parsed));
+                console.log('Full parsed data:', parsed);
+                
+                // Check for dashboard_kpis
+                if ('dashboard_kpis' in parsed) {
+                    console.log('✅ dashboard_kpis found!');
+                    console.log('Dashboard KPIs:', parsed.dashboard_kpis);
+                    console.log('Dashboard KPIs keys:', Object.keys(parsed.dashboard_kpis));
+                } else {
+                    console.log('❌ dashboard_kpis NOT found!');
+                    console.log('Available keys:', Object.keys(parsed));
+                }
+                
+                // Check for other possible KPI locations
+                if (parsed.kpis) {
+                    console.log('Found kpis field:', parsed.kpis);
+                }
+                if (parsed.company_metrics) {
+                    console.log('Found company_metrics field:', parsed.company_metrics);
+                }
+                if (parsed.data && parsed.data.dashboard_kpis) {
+                    console.log('Found nested dashboard_kpis:', parsed.data.dashboard_kpis);
+                }
+                
+            } catch (error) {
+                console.error('Failed to parse localStorage data:', error);
+            }
+        } else {
+            console.log('No data found in localStorage');
+        }
+        
+        // Also check what the mapping function would return
+        function testMapping(results) {
+            if (!results) return null;
+            
+            console.log('=== TESTING MAPPING FUNCTION ===');
+            const dashboardKpis = results.dashboard_kpis || {};
+            console.log('Extracted dashboard_kpis:', dashboardKpis);
+            
+            const overview = {
+                totalRevenue: dashboardKpis.total_revenue || 0,
+                totalExpenses: dashboardKpis.total_expenses || 0,
+                netIncome: dashboardKpis.net_income || 0,
+                profitMargin: dashboardKpis.profit_margin || 0
+            };
+            
+            console.log('Mapped overview:', overview);
+            return overview;
+        }
+        
+        if (storedData) {
+            const parsed = JSON.parse(storedData);
+            testMapping(parsed);
+        }
+    </script>
+</body>
+</html>
