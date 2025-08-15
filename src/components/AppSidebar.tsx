@@ -1,4 +1,4 @@
-import { BarChart3, TrendingUp, Building2, Rocket, History } from 'lucide-react';
+import { BarChart3, TrendingUp, Building2, Rocket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sidebar,
@@ -14,18 +14,13 @@ import {
 const models = [
   {
     id: '3-statement',
-    name: '3-Statement Model',
+    name: '3-Statement and DCF',
     icon: BarChart3,
   },
   {
     id: 'startup',
     name: 'Startup Model',
     icon: Rocket,
-  },
-  {
-    id: 'historical',
-    name: 'Historical Model',
-    icon: History,
   },
 ];
 
@@ -48,20 +43,7 @@ export function AppSidebar({ selectedModel, onModelSelect, tabs, activeTab, onTa
   
   const handleModelSelect = (modelId: string) => {
     onModelSelect(modelId);
-    if (modelId === 'historical') {
-      navigate('/historical');
-    } else {
-      navigate(`/model/${modelId}`);
-    }
-  };
-
-  // Handle historical model navigation when already on historical pages
-  const handleHistoricalNavigation = () => {
-    if (selectedModel === 'historical') {
-      // If we're already on historical, just stay on the current page
-      return;
-    }
-    navigate('/historical');
+    navigate(`/model/${modelId}`);
   };
   
   return (

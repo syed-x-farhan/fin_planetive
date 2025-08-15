@@ -513,8 +513,8 @@ export const threeStatementImportConfig: ImportConfig = {
  */
 export const threeStatementModelInfo: ModelInfo = {
   id: '3-statement',
-  name: '3-Statement Financial Model',
-  description: 'Integrated Income Statement, Balance Sheet, and Cash Flow projections',
+  name: '3-Statement and DCF',
+  description: 'Integrated Income Statement, Balance Sheet, Cash Flow Statement, and DCF valuation',
   complexity: 'Intermediate',
   timeEstimate: '15-30 min'
 };

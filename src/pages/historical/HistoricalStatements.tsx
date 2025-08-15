@@ -25,7 +25,7 @@ const formatYear = (year: string | number, idx: number) => {
 const normalizeCalculationResult = (data: any): CalculationResult | null => {
   if (!data) return null;
   
-  console.log('Normalizing calculation result:', data);
+  // Normalizing calculation result
   
   // Handle nested data structure (data.data contains the actual calculation result)
   const calculationData = data.data || data;
@@ -173,36 +173,26 @@ const HistoricalStatements: React.FC<HistoricalStatementsProps> = ({ calculation
     if (!calculationResult) {
       // Try context first (primary)
       if (historicalCalculationResult) {
-        console.log('Loading from context:', historicalCalculationResult);
-        console.log('Context data keys:', Object.keys(historicalCalculationResult));
-        console.log('Has dashboard_kpis in context?', 'dashboard_kpis' in historicalCalculationResult);
-        console.log('Context dashboard_kpis:', (historicalCalculationResult as any).dashboard_kpis);
+        // Loading from context
         
         const normalized = normalizeCalculationResult(historicalCalculationResult);
         if (normalized) {
-          console.log('Successfully normalized calculation result from context');
-          console.log('Normalized data keys:', Object.keys(normalized));
-          console.log('Has dashboard_kpis in normalized?', 'dashboard_kpis' in normalized);
-          console.log('Normalized dashboard_kpis:', normalized.dashboard_kpis);
+          // Successfully normalized from context
           setCalculationResult(normalized);
         }
       } else {
         // Fallback to localStorage (backup)
         const stored = localStorage.getItem('historical_calculation_result');
-        console.log('Loading from localStorage:', stored);
+        // Loading from localStorage
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            console.log('Parsed calculation result:', parsed);
-            console.log('Parsed result keys:', Object.keys(parsed));
-            console.log('Income statement structure:', parsed.income_statement);
-            console.log('Balance sheet structure:', parsed.balance_sheet);
-            console.log('Cash flow structure:', parsed.cash_flow);
+            // Parsed calculation result
             
             // Normalize the data structure
             const normalized = normalizeCalculationResult(parsed);
             if (normalized) {
-              console.log('Successfully normalized calculation result');
+              // Successfully normalized
               setCalculationResult(normalized);
             } else {
               console.error('Failed to normalize calculation result');
@@ -215,7 +205,7 @@ const HistoricalStatements: React.FC<HistoricalStatementsProps> = ({ calculation
             localStorage.removeItem('historical_calculation_result');
           }
         } else {
-          console.log('No historical calculation result found in localStorage');
+          // No data found in localStorage
         }
       }
     }

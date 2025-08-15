@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, HelpCircle } from 'lucide-react';
+import { Trash2, Plus, HelpCircle, Upload } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -115,7 +115,7 @@ export const SaaSBusinessInputForm: React.FC<SaaSBusinessInputFormProps> = ({ on
   const [creditCollectionDays, setCreditCollectionDays] = useState(initialValues?.creditSales?.collectionDays || '');
   const [hasAP, setHasAP] = useState(initialValues?.accountsPayable ? true : false);
   const [apDays, setApDays] = useState(initialValues?.accountsPayable?.days || '');
-  const [expenseInputType, setExpenseInputType] = useState<'monthly' | 'annual'>('monthly');
+  const [expenseInputType, setExpenseInputType] = useState<'monthly' | 'annual'>('annual');
   const [fiscalYearStart, setFiscalYearStart] = useState(initialValues?.fiscalYearStart || 'January');
   // Add revenue input type toggle
   const [revenueInputType, setRevenueInputType] = useState<'monthly' | 'annual'>('monthly');
@@ -387,13 +387,20 @@ export const SaaSBusinessInputForm: React.FC<SaaSBusinessInputFormProps> = ({ on
 
   return (
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-10 py-8 px-2">
-      {onBack && (
-        <div className="mb-6">
-          <Button type="button" variant="outline" onClick={onBack} className="mr-2">
-            ← Back
+      {/* Header with Back and Import buttons */}
+      <div className="flex items-center justify-end mb-6">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <Button type="button" variant="outline" onClick={onBack}>
+              ← Back
+            </Button>
+          )}
+          <Button type="button" variant="outline" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Import from Excel
           </Button>
         </div>
-      )}
+      </div>
       {/* Fiscal Year Selector */}
       <div className="mb-6">
         <Label className="block mb-2 font-semibold">Fiscal Year Starts In</Label>

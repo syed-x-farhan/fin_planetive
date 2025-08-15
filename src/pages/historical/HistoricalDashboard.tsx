@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -69,31 +69,40 @@ const HISTORICAL_DASHBOARD_TABS = [
 // Scalable sensitivity parameters by company type
 const SENSITIVITY_PARAMETERS = {
   service: {
-    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 15, worst: -15 },
-    clientRetention: { label: 'Client Retention Rate', unit: '%', base: 0, best: 10, worst: -10 },
-    operatingMargin: { label: 'Operating Margin', unit: '%', base: 0, best: 5, worst: -5 },
-    taxRate: { label: 'Tax Rate', unit: '%', base: 0, best: -5, worst: 5 },
-    workingCapitalDays: { label: 'Working Capital Days', unit: ' days', base: 0, best: -15, worst: 15 },
-    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -2, worst: 2 },
-    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 1, worst: -1 }
+    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 100, worst: -50 },
+    clientRetention: { label: 'Client Retention Rate', unit: '%', base: 0, best: 50, worst: -40 },
+    operatingMargin: { label: 'Operating Margin', unit: '%', base: 0, best: 40, worst: -30 },
+    taxRate: { label: 'Tax Rate', unit: '%', base: 0, best: -40, worst: 60 },
+    workingCapitalDays: { label: 'Working Capital Days', unit: ' days', base: 0, best: -60, worst: 60 },
+    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -15, worst: 25 },
+    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 10, worst: -5 }
+  },
+  retail: {
+    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 80, worst: -40 },
+    grossMargin: { label: 'Gross Margin', unit: '%', base: 0, best: 50, worst: -35 },
+    inventoryTurnover: { label: 'Inventory Turnover', unit: 'x', base: 0, best: 100, worst: -50 },
+    workingCapitalDays: { label: 'Working Capital Days', unit: 'days', base: 0, best: -50, worst: 50 },
+    storeUtilization: { label: 'Store Utilization', unit: '%', base: 0, best: 60, worst: -50 },
+    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -15, worst: 25 },
+    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 10, worst: -5 }
   },
   manufacturing: {
-    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 15, worst: -15 },
-    grossMargin: { label: 'Gross Margin', unit: '%', base: 0, best: 8, worst: -8 },
-    capacityUtilization: { label: 'Capacity Utilization', unit: '%', base: 0, best: 20, worst: -20 },
-    workingCapitalDays: { label: 'Working Capital Days', unit: 'days', base: 0, best: -10, worst: 10 },
-    capexPercent: { label: 'CapEx as % of Revenue', unit: '%', base: 0, best: -25, worst: 25 },
-    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -2, worst: 2 },
-    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 1, worst: -1 }
+    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 80, worst: -40 },
+    grossMargin: { label: 'Gross Margin', unit: '%', base: 0, best: 50, worst: -35 },
+    capacityUtilization: { label: 'Capacity Utilization', unit: '%', base: 0, best: 60, worst: -50 },
+    workingCapitalDays: { label: 'Working Capital Days', unit: 'days', base: 0, best: -50, worst: 50 },
+    capexPercent: { label: 'CapEx as % of Revenue', unit: '%', base: 0, best: -80, worst: 80 },
+    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -15, worst: 25 },
+    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 10, worst: -5 }
   },
   tech: {
-    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 25, worst: -25 },
-    cac: { label: 'Customer Acquisition Cost', unit: '%', base: 0, best: -30, worst: 30 },
-    clv: { label: 'Customer Lifetime Value', unit: '%', base: 0, best: 25, worst: -25 },
-    churnRate: { label: 'Churn Rate', unit: '%', base: 0, best: -20, worst: 20 },
-    grossMargin: { label: 'Gross Margin', unit: '%', base: 0, best: 5, worst: -5 },
-    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -2, worst: 2 },
-    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 1.5, worst: -1.5 }
+    revenueGrowth: { label: 'Revenue Growth Rate', unit: '%', base: 0, best: 200, worst: -60 },
+    cac: { label: 'Customer Acquisition Cost', unit: '%', base: 0, best: -80, worst: 80 },
+    clv: { label: 'Customer Lifetime Value', unit: '%', base: 0, best: 100, worst: -50 },
+    churnRate: { label: 'Churn Rate', unit: '%', base: 0, best: -60, worst: 60 },
+    grossMargin: { label: 'Gross Margin', unit: '%', base: 0, best: 60, worst: -40 },
+    wacc: { label: 'WACC/Discount Rate', unit: '%', base: 0, best: -15, worst: 25 },
+    terminalGrowth: { label: 'Terminal Growth Rate', unit: '%', base: 0, best: 15, worst: -8 }
   }
 };
 
@@ -118,35 +127,29 @@ const DebtToEquityBar: React.FC<{ calculationResult: CalculationResult | null }>
 
   // If the ratio is 0 but we have balance sheet data, calculate it manually
   if (debtToEquityRatio === 0 && calculationResult.balance_sheet) {
-    const totalLiabilities = calculationResult.balance_sheet.line_items?.find(item => 
+    const totalLiabilities = calculationResult.balance_sheet.line_items?.find(item =>
       item.label === 'TOTAL LIABILITIES'
     );
-    const totalEquity = calculationResult.balance_sheet.line_items?.find(item => 
+    const totalEquity = calculationResult.balance_sheet.line_items?.find(item =>
       item.label === 'TOTAL EQUITY'
     );
-    
+
     if (totalLiabilities && totalEquity && totalLiabilities.values && totalEquity.values) {
       // Use base year (current year) data instead of latest forecast year
       // If yearsInBusiness = 2, then years[1] = 2025 (base year), years[0] = 2024 (historical)
       const yearsInBusiness = 2; // This should come from the form data, but hardcoded for now
       const baseYearIdx = yearsInBusiness - 1; // Index 1 = 2025 (base year)
-      
+
       const baseYearLiabilities = totalLiabilities.values[baseYearIdx] || 0;
       const baseYearEquity = totalEquity.values[baseYearIdx] || 0;
-      
+
       if (baseYearEquity !== 0) {
         debtToEquityRatio = baseYearLiabilities / baseYearEquity;
-        console.log('=== MANUAL DEBT TO EQUITY CALCULATION (Base Year) ===');
-        console.log('Base Year Index:', baseYearIdx);
-        console.log('Base Year Liabilities:', baseYearLiabilities);
-        console.log('Base Year Equity:', baseYearEquity);
-        console.log('Calculated D/E ratio:', debtToEquityRatio);
       }
     }
   }
 
   // Show final debt to equity ratio value
-  console.log('Debt to Equity Ratio:', debtToEquityRatio);
 
   // Calculate debt and equity percentages for visualization
   // D/E ratio = Total Debt / Total Equity
@@ -212,19 +215,25 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
   const years = incomeStatement?.years || [];
   const lineItems = incomeStatement?.line_items || [];
 
-  // Debug: Log the data structure
-  console.log('=== REVENUE VS EXPENSE CHART - DATA EXTRACTION ===');
-  console.log('Income statement keys:', Object.keys(incomeStatement || {}));
-  console.log('Years array:', years);
-  console.log('Line items count:', lineItems?.length || 0);
-  console.log('First few line items:', lineItems?.slice(0, 5).map(item => ({
-    label: item.label,
-    values: item.values?.slice(0, 3) // Show first 3 values
-  })));
+  // Debug: Log the structure of the calculation result
+  console.log('Revenue vs Expense Chart - Data Structure:', {
+    hasCalculationResult: !!calculationResult,
+    hasIncomeStatement: !!incomeStatement,
+    years: years,
+    lineItemsCount: lineItems?.length || 0,
+    lineItemLabels: lineItems?.map(item => item.label) || [],
+    dashboardKpis: calculationResult?.dashboard_kpis || {},
+    dashboardKpisKeys: calculationResult?.dashboard_kpis ? Object.keys(calculationResult.dashboard_kpis) : [],
+    totalExpenses: calculationResult?.dashboard_kpis?.total_expenses,
+    totalRevenue: calculationResult?.dashboard_kpis?.total_revenue,
+    calculationResultKeys: calculationResult ? Object.keys(calculationResult) : []
+  });
+
+  // Extract data structure
 
   // Validate data structure
   if (!incomeStatement) {
-    console.error('❌ No income statement found in calculationResult');
+    console.error('No income statement found in calculationResult');
     return (
       <div className="flex items-center justify-center h-80">
         <div className="text-center">
@@ -236,7 +245,7 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
   }
 
   if (!years || years.length === 0) {
-    console.error('❌ No years found in income statement');
+    console.error('No years found in income statement');
     return (
       <div className="flex items-center justify-center h-80">
         <div className="text-center">
@@ -248,7 +257,7 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
   }
 
   if (!lineItems || lineItems.length === 0) {
-    console.error('❌ No line items found in income statement');
+    console.error('No line items found in income statement');
     return (
       <div className="flex items-center justify-center h-80">
         <div className="text-center">
@@ -261,24 +270,24 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
 
   // More robust revenue detection - try multiple possible labels and patterns
   let revenueItem = null;
-  
+
   // First, try to find the actual revenue line item (most accurate)
   revenueItem = lineItems.find((item: any) => {
     const label = item.label?.toLowerCase() || '';
     // Skip header rows and look for actual data rows
     if ((item as any).is_header || (item as any).is_spacer) return false;
-    
+
     return [
       'total revenue', 'revenue', 'sales', 'gross revenue', 'net revenue',
       'service revenue', 'product revenue', 'operating revenue'
     ].some(revenueLabel => label.includes(revenueLabel));
   });
-  
+
   // If no revenue found in line items, fallback to dashboard_kpis
   if (!revenueItem && calculationResult.dashboard_kpis?.total_revenue) {
     const totalRevenue = calculationResult.dashboard_kpis.total_revenue;
     const syntheticRevenueValues = years.map(() => totalRevenue / years.length);
-    
+
     revenueItem = {
       label: 'Total Revenue (from dashboard_kpis)',
       values: syntheticRevenueValues
@@ -287,54 +296,60 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
 
   // More robust expense detection - try multiple approaches
   let expensesItem = null;
-  
+
   // First, try to find the actual expense line item (most accurate)
+  // Prioritize TOTAL OPERATING EXPENSES as it's the correct label from backend
   expensesItem = lineItems.find((item: any) => {
     const label = item.label?.toLowerCase() || '';
+    // Skip header rows and look for actual data rows
+    if ((item as any).is_header || (item as any).is_spacer) return false;
+
     return [
-      'total operating expenses', 'operating expenses', 'total expenses',
-      'operating costs', 'total costs', 'expenses'
-    ].some(expenseLabel => label.includes(expenseLabel));
+      'total operating expenses', 'TOTAL OPERATING EXPENSES', 'operating expenses',
+      'total expenses', 'operating costs', 'total costs', 'expenses'
+    ].some(expenseLabel => label.toLowerCase().includes(expenseLabel.toLowerCase()));
   });
-  
+
   // If no expense line item found, fallback to dashboard_kpis
   if (!expensesItem && calculationResult.dashboard_kpis?.total_expenses) {
     const totalExpenses = calculationResult.dashboard_kpis.total_expenses;
     const syntheticExpenseValues = years.map(() => totalExpenses / years.length);
-    
+
     expensesItem = {
       label: 'Total Expenses (from dashboard_kpis)',
       values: syntheticExpenseValues
     };
   }
 
-  // Debug: Log what we found
-  console.log('=== REVENUE VS EXPENSE CHART - ITEM DETECTION ===');
-  console.log('Revenue item found:', revenueItem ? {
-    label: revenueItem.label,
-    values: revenueItem.values?.slice(0, 3)
-  } : 'NOT FOUND');
-  console.log('Expenses item found:', expensesItem ? {
-    label: expensesItem.label,
-    values: expensesItem.values?.slice(0, 3)
-  } : 'NOT FOUND');
+  // Revenue and expense items found
+  console.log('Revenue vs Expense Chart - Items Found:', {
+    revenueItem: revenueItem ? { label: revenueItem.label, values: revenueItem.values } : null,
+    expensesItem: expensesItem ? { label: expensesItem.label, values: expensesItem.values } : null,
+    revenueLabel: revenueItem?.label,
+    expenseLabel: expensesItem?.label
+  });
+
 
   // If total operating expenses not found or zero, try to find individual expense categories
   if (!expensesItem || (expensesItem.values && expensesItem.values.every((val: number) => val === 0))) {
     // Look for expense line items with various patterns
+    // Prioritize operating expense patterns that match backend labels
     const expensePatterns = [
-      'expense -', 'cost -', 'operating', 'administrative', 'marketing',
+      'operating expenses', 'operating costs', 'administrative', 'marketing',
       'research', 'development', 'rent', 'utilities', 'insurance', 'depreciation',
-      'amortization', 'interest', 'taxes', 'salaries', 'wages', 'benefits'
+      'amortization', 'interest', 'taxes', 'salaries', 'wages', 'benefits',
+      'expense -', 'cost -'
     ];
 
     const individualExpenseItems = lineItems.filter((item: any) => {
       const label = item.label?.toLowerCase() || '';
-      return expensePatterns.some(pattern => label.includes(pattern)) && 
-             !label.includes('revenue') && 
-             !label.includes('income') &&
-             !label.includes('gross') &&
-             !label.includes('net');
+      // Skip headers, spacers, and non-expense items
+      if ((item as any).is_header || (item as any).is_spacer) return false;
+      if (label.includes('revenue') || label.includes('income') ||
+        label.includes('gross') || label.includes('net') ||
+        label.includes('total') && !label.includes('expense')) return false;
+
+      return expensePatterns.some(pattern => label.includes(pattern));
     });
 
     if (individualExpenseItems.length > 0) {
@@ -348,7 +363,7 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
 
       // Create a synthetic expenses item
       expensesItem = {
-        label: 'Total Expenses (Calculated)',
+        label: 'Total Expenses (Calculated from Individual Items)',
         values: summedValues
       };
     }
@@ -380,15 +395,25 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
   if (!revenueItem || !expensesItem) {
     // Show more detailed error information
     const availableLabels = lineItems.map(item => item.label).join(', ');
-    
+
     // Try to find any items that might contain revenue or expense data
-    const potentialRevenueItems = lineItems.filter(item => 
+    const potentialRevenueItems = lineItems.filter(item =>
       item.label && item.label.toLowerCase().includes('revenue')
     );
-    const potentialExpenseItems = lineItems.filter(item => 
+    const potentialExpenseItems = lineItems.filter(item =>
       item.label && item.label.toLowerCase().includes('expense')
     );
-    
+
+    // Debug information
+    console.log('Revenue vs Expense Chart Debug:', {
+      availableLabels: lineItems.map(item => item.label),
+      revenueItem: revenueItem,
+      expensesItem: expensesItem,
+      dashboardKpis: calculationResult.dashboard_kpis,
+      potentialRevenueItems: potentialRevenueItems.map(item => item.label),
+      potentialExpenseItems: potentialExpenseItems.map(item => item.label)
+    });
+
     return (
       <div className="flex items-center justify-center h-80">
         <div className="text-center">
@@ -396,6 +421,9 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
           <p className="text-xs text-muted-foreground">Available labels: {availableLabels}</p>
           <p className="text-xs text-muted-foreground mt-2">
             Revenue items: {potentialRevenueItems.length}, Expense items: {potentialExpenseItems.length}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Dashboard KPIs available: {calculationResult.dashboard_kpis ? 'Yes' : 'No'}
           </p>
         </div>
       </div>
@@ -405,10 +433,7 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
   const revenueValues = revenueItem.values || [];
   const expenseValues = expensesItem.values || [];
 
-  // Show dashboard KPI values
-  console.log('Dashboard KPIs - Total Revenue:', calculationResult.dashboard_kpis?.total_revenue);
-  console.log('Dashboard KPIs - Total Expenses:', calculationResult.dashboard_kpis?.total_expenses);
-  console.log('Dashboard KPIs - Net Income:', calculationResult.dashboard_kpis?.net_income);
+  // Dashboard KPI values available
 
   // Create enhanced chart data for ALL years (historical and forecasted)
   const chartData = years.map((year: string, idx: number) => {
@@ -451,13 +476,15 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
     };
   });
 
-  // Show final chart data with debugging info
-  console.log('=== REVENUE VS EXPENSE CHART - FINAL DATA ===');
-  console.log('Total years:', years.length);
-  console.log('Years:', years);
-  console.log('Chart data:', chartData);
-  chartData.forEach((item, idx) => {
-    console.log(`Year ${item.period} (${item.yearType}): Revenue: $${item.revenue.toFixed(2)}, Expenses: $${item.expenses.toFixed(2)}`);
+  // Chart data prepared
+  console.log('Revenue vs Expense Chart - Final Chart Data:', {
+    chartDataLength: chartData.length,
+    firstYearData: chartData[0],
+    lastYearData: chartData[chartData.length - 1],
+    revenueValues: revenueValues,
+    expenseValues: expenseValues,
+    revenueLabel: revenueItem?.label,
+    expenseLabel: expensesItem?.label
   });
 
   return (
@@ -465,24 +492,19 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="period" 
+          <XAxis
+            dataKey="period"
             tick={{ fontSize: 11 }}
             interval={0} // Show all years
           />
-          <YAxis 
-            yAxisId="left" 
+          <YAxis
+            yAxisId="left"
             tick={{ fontSize: 11 }}
-            tickFormatter={(value) => {
-              // Format Y-axis labels to show actual values, not thousands
-              if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-              if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-              return `$${value.toFixed(0)}`;
-            }}
+            tickFormatter={(value) => `$${Number(value).toFixed(2)}`}
           />
-          <YAxis 
-            yAxisId="right" 
-            orientation="right" 
+          <YAxis
+            yAxisId="right"
+            orientation="right"
             tick={{ fontSize: 11 }}
             tickFormatter={(value) => `${value.toFixed(0)}%`}
           />
@@ -490,18 +512,13 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
             formatter={(value: any, name: string, props: any) => {
               const data = props.payload;
               if (name === 'revenue') {
-                // Format tooltip to show actual values with proper formatting
-                if (value >= 1000000) return [`$${(value / 1000000).toFixed(2)}M`, 'Revenue'];
-                if (value >= 1000) return [`$${(value / 1000).toFixed(1)}K`, 'Revenue'];
-                return [`$${value.toFixed(2)}`, 'Revenue'];
+                return [`$${Number(value).toFixed(2)}`, 'Revenue'];
               } else if (name === 'expenses') {
-                if (value >= 1000000) return [`$${(value / 1000000).toFixed(2)}M`, 'Expenses'];
-                if (value >= 1000) return [`$${(value / 1000).toFixed(1)}K`, 'Expenses'];
-                return [`$${value.toFixed(2)}`, 'Expenses'];
+                return [`$${Number(value).toFixed(2)}`, 'Expenses'];
               } else if (name === 'expenseToRevenueRatio') {
-                return [`${value.toFixed(1)}%`, 'Expense Ratio'];
+                return [`${Number(value).toFixed(1)}%`, 'Expense Ratio'];
               }
-              return [`${value.toLocaleString()}`, name];
+              return [`${Number(value).toFixed(2)}`, name];
             }}
             labelFormatter={(label) => `Year: ${label}`}
             contentStyle={{
@@ -523,11 +540,7 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
               dataKey="revenue"
               position="top"
               formatter={(value: number) => {
-                // Format labels to show actual values, not just "0K" for small values
-                if (value === 0) return '$0';
-                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-                if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-                return `$${value.toFixed(0)}`;
+                return `$${Number(value).toFixed(2)}`;
               }}
               style={{
                 fontSize: '10px',
@@ -543,11 +556,7 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
               dataKey="expenses"
               position="top"
               formatter={(value: number) => {
-                // Format labels to show actual values, not just "0K" for small values
-                if (value === 0) return '$0';
-                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-                if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-                return `$${value.toFixed(0)}`;
+                return `$${Number(value).toFixed(2)}`;
               }}
               style={{
                 fontSize: '10px',
@@ -577,7 +586,51 @@ const RevenueVsExpenseChart: React.FC<{ calculationResult: CalculationResult | n
   );
 };
 
-// Historical Analysis Chart Component
+// Helper function to extract net debt from balance sheet
+const extractNetDebt = (balanceSheet: any): number => {
+  if (!balanceSheet?.line_items) return 0;
+
+  const lineItems = balanceSheet.line_items;
+
+  // Find total debt and cash positions
+  const totalDebt = lineItems.find(item =>
+    item.label?.toLowerCase().includes('total debt') ||
+    item.label?.toLowerCase().includes('total liabilities')
+  )?.values?.[0] || 0;
+
+  const totalCash = lineItems.find(item =>
+    item.label?.toLowerCase().includes('cash') ||
+    item.label?.toLowerCase().includes('total current assets')
+  )?.values?.[0] || 0;
+
+  return Math.max(0, totalDebt - totalCash);
+};
+
+/**
+ * Historical Analysis Chart Component
+ * 
+ * Professional Financial Valuation Methodology:
+ * 
+ * 1. HISTORICAL VALUES: Use actual historical performance with time-value-of-money adjustments
+ *    - Apply discount rate based on WACC to historical earnings
+ *    - Use industry-standard P/E ratios (15x for service companies)
+ * 
+ * 2. CURRENT VALUES: Use backend DCF calculations (most accurate)
+ *    - Leverage professional DCF models from backend
+ *    - Include terminal value and growth projections
+ * 
+ * 3. FORECAST VALUES: Use DCF projections with growth assumptions
+ *    - Apply revenue growth rates from backend assumptions
+ *    - Use compound growth formula: FV = PV * (1 + r)^n
+ * 
+ * 4. ENTERPRISE VALUE: Always = Equity Value + Net Debt
+ *    - Extract actual debt and cash from balance sheet
+ *    - Follow financial accounting principles
+ * 
+ * 5. VALIDATION: Ensure EV >= Equity Value (financial rule)
+ *    - Prevent negative values
+ *    - Maintain financial consistency
+ */
 const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult | null }> = ({ calculationResult }) => {
   if (!calculationResult) {
     return (
@@ -587,21 +640,29 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
     );
   }
 
-  // Extract data from calculation result
+  // Extract data from calculation result and dashboard KPIs
   const incomeStatement = calculationResult.income_statement;
-  const years = incomeStatement?.years || [];
+  const dashboardKpis = calculationResult?.dashboard_kpis as any;
+
+  // Get years from dashboard KPIs if available, fallback to income statement
+  const years = dashboardKpis?.chart_data?.years || incomeStatement?.years || [];
   const lineItems = incomeStatement?.line_items || [];
 
-  // Find revenue, EBITDA, and net income line items
-  const revenueItem = lineItems.find((item: any) => item.label === 'TOTAL REVENUE');
-  const ebitdaItem = lineItems.find((item: any) => item.label === 'EBITDA');
-  const netIncomeItem = lineItems.find((item: any) => item.label === 'NET INCOME');
+  // Get data from dashboard KPIs (preferred) or line items (fallback)
+  const revenueValues = dashboardKpis?.chart_data?.revenue_all_years ||
+    lineItems.find((item: any) => item.label === 'TOTAL REVENUE')?.values || [];
+  const ebitdaValues = dashboardKpis?.chart_data?.ebitda_all_years ||
+    lineItems.find((item: any) => item.label === 'EBITDA')?.values || [];
+  const netIncomeValues = dashboardKpis?.chart_data?.net_income_all_years ||
+    lineItems.find((item: any) => item.label === 'NET INCOME')?.values || [];
 
-  const revenueValues = revenueItem?.values || [];
-  const ebitdaValues = ebitdaItem?.values || [];
-  const netIncomeValues = netIncomeItem?.values || [];
+  // Get FCF data from dashboard KPIs
+  const fcfValues = dashboardKpis?.chart_data?.free_cash_flow_all_years ||
+    dashboardKpis?.free_cash_flow_all_years || [];
 
-  // Create chart data with sections
+
+
+  // Create chart data with sections including FCF
   const chartData = years.map((year: string, index: number) => {
     const currentYear = new Date().getFullYear();
     const yearNum = parseInt(year);
@@ -616,42 +677,153 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
     return {
       year,
       section,
-      revenue: (revenueValues[index] || 0) / 1000, // Convert to thousands for better display
-      ebitda: (ebitdaValues[index] || 0) / 1000,
-      netIncome: (netIncomeValues[index] || 0) / 1000,
+      revenue: revenueValues[index] || 0, // Keep original values for better precision
+      ebitda: ebitdaValues[index] || 0,
+      netIncome: netIncomeValues[index] || 0,
+      fcf: fcfValues[index] || 0, // Keep FCF values as is
     };
   });
 
   // Get unique sections
   const sections = [...new Set(chartData.map(d => d.section))];
 
+  // Define formatCurrency function before using it
+  const formatCurrency = (value: number) => {
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   // Calculate insights for each section
   const insights: Record<string, any> = {};
-  sections.forEach(section => {
+  sections.forEach((section: string) => {
     const sectionData = chartData.filter(d => d.section === section);
 
     if (sectionData.length > 0) {
       const avgRevenue = sectionData.reduce((sum, d) => sum + d.revenue, 0) / sectionData.length;
       const avgEbitda = sectionData.reduce((sum, d) => sum + d.ebitda, 0) / sectionData.length;
       const avgNetIncome = sectionData.reduce((sum, d) => sum + d.netIncome, 0) / sectionData.length;
+      const avgFcf = sectionData.reduce((sum, d) => sum + d.fcf, 0) / sectionData.length;
       const totalRevenue = sectionData.reduce((sum, d) => sum + d.revenue, 0);
 
-      insights[section] = {
+      // Calculate section-specific financial valuations using professional methodology
+      let equityValue = 0;
+      let enterpriseValue = 0;
+
+      // Calculate values specific to this section's time period
+      if (calculationResult?.dashboard_kpis) {
+        const kpis = calculationResult.dashboard_kpis;
+
+        // Professional valuation approach for each section
+        if (section === 'historical') {
+          // Historical section: Use actual historical performance with proper time-value adjustments
+          if (kpis.base_case_equity_value && sectionData.length > 0) {
+            // Calculate historical value based on actual performance and time value of money
+            const historicalYears = sectionData.length;
+            const discountRate = (kpis.wacc || 12) / 100;
+
+            // Use average historical net income with proper discounting
+            const historicalEquityValue = avgNetIncome * 15; // Industry P/E ratio
+            equityValue = historicalEquityValue / Math.pow(1 + discountRate, historicalYears);
+          } else {
+            // Fallback: Use historical net income with industry multiple
+            const peRatio = 15; // Industry standard P/E ratio
+            equityValue = avgNetIncome * peRatio;
+          }
+
+        } else if (section === 'current') {
+          // Current section: Use backend DCF calculations (most accurate)
+          if (kpis.base_case_equity_value) {
+            equityValue = kpis.base_case_equity_value;
+          } else {
+            // Calculate from current net income data using industry multiple
+            const peRatio = 15;
+            equityValue = avgNetIncome * peRatio;
+          }
+
+        } else if (section === 'forecast') {
+          // Forecast section: Use DCF projections with growth assumptions
+          if (kpis.base_case_equity_value && kpis.base_case_assumptions) {
+            // Apply professional growth projections based on DCF assumptions
+            const growthRate = (kpis.base_case_assumptions.revenue_growth_rate || 10) / 100;
+            const projectionYears = sectionData.length;
+
+            // Calculate projected equity value using growth rate
+            equityValue = kpis.base_case_equity_value * Math.pow(1 + growthRate, projectionYears);
+          } else {
+            // Fallback: Use projected net income with growth-adjusted multiple
+            const peRatio = 15;
+            const growthFactor = 1.1; // Conservative 10% growth assumption
+            equityValue = avgNetIncome * peRatio * growthFactor;
+          }
+        }
+
+        // Enterprise Value = Equity Value + Net Debt (professional calculation)
+        const netDebt = extractNetDebt(calculationResult.balance_sheet);
+
+        enterpriseValue = equityValue + netDebt;
+
+        // Ensure Enterprise Value >= Equity Value (financial rule)
+        if (enterpriseValue < equityValue) {
+          enterpriseValue = equityValue;
+        }
+
+        // Professional validation: Ensure reasonable values
+        if (equityValue < 0) equityValue = 0;
+        if (enterpriseValue < 0) enterpriseValue = 0;
+
+        // Section-specific values calculated using professional methodology
+
+      } else {
+        // Fallback: Calculate section-specific values using professional methodology
+        const peRatio = 15; // Industry standard P/E ratio
+
+        if (section === 'historical') {
+          // Historical: Use time-value-adjusted calculation
+          const historicalYears = sectionData.length;
+          const discountRate = 0.12; // Default 12% discount rate
+          const baseEquityValue = avgNetIncome * peRatio;
+          equityValue = baseEquityValue / Math.pow(1 + discountRate, historicalYears);
+        } else if (section === 'current') {
+          // Current: Use baseline calculation
+          equityValue = avgNetIncome * peRatio;
+        } else if (section === 'forecast') {
+          // Forecast: Use growth-adjusted calculation
+          const growthRate = 0.10; // Conservative 10% growth assumption
+          const projectionYears = sectionData.length;
+          equityValue = avgNetIncome * peRatio * Math.pow(1 + growthRate, projectionYears);
+        }
+
+        // Enterprise Value = Equity Value + Net Debt (extract from balance sheet)
+        const netDebt = extractNetDebt(calculationResult.balance_sheet);
+
+        enterpriseValue = equityValue + netDebt;
+
+        // Ensure Enterprise Value >= Equity Value
+        if (enterpriseValue < equityValue) {
+          enterpriseValue = equityValue;
+        }
+
+        // Professional validation: Ensure reasonable values
+        if (equityValue < 0) equityValue = 0;
+        if (enterpriseValue < 0) enterpriseValue = 0;
+
+        // Fallback values calculated using professional methodology
+      }
+
+      insights[section as string] = {
         vertical: section === 'historical' ? 'Historical Performance' :
           section === 'current' ? 'Current Performance' : 'Projected Performance',
         horizontal: section === 'historical' ? 'Past Data' :
           section === 'current' ? 'Present' : 'Future Trend ↑',
-        equity: `$${(avgNetIncome * 10).toFixed(0)}K`, // Simple equity estimate
-        enterprise: `$${(totalRevenue * 1.5).toFixed(0)}K`, // Simple enterprise value estimate
-        avgRevenue: `$${avgRevenue.toFixed(0)}K`,
-        avgEbitda: `$${avgEbitda.toFixed(0)}K`,
-        avgNetIncome: `$${avgNetIncome.toFixed(0)}K`,
+        equity: formatCurrency(equityValue),
+        enterprise: formatCurrency(enterpriseValue),
+        avgRevenue: formatCurrency(avgRevenue),
+        avgEbitda: formatCurrency(avgEbitda),
+        avgNetIncome: formatCurrency(avgNetIncome),
+        avgFcf: formatCurrency(avgFcf),
         periods: sectionData.length
       };
     }
   });
-
-  const formatCurrency = (value: number) => `$${value.toFixed(0)}K`;
 
   return (
     <div className="w-full">
@@ -695,7 +867,8 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
             />
             <YAxis
               tick={{ fontSize: 12 }}
-              label={{ value: 'Amount ($K)', angle: -90, position: 'insideLeft' }}
+              tickFormatter={(value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip
               formatter={(value: number, name: string) => {
@@ -703,20 +876,21 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
                 const labels = {
                   revenue: 'Revenue',
                   ebitda: 'EBITDA',
-                  netIncome: 'Net Income'
+                  netIncome: 'Net Income',
+                  fcf: 'Free Cash Flow'
                 };
                 return [formatValue, labels[name as keyof typeof labels] || name];
               }}
               labelFormatter={(label) => `Year: ${label}`}
             />
 
-            {/* Net Income as bars */}
+            {/* FCF as bars (replacing Net Income bars) */}
             <Bar
-              dataKey="netIncome"
-              fill="#14b8a6"
+              dataKey="fcf"
+              fill="#8b5cf6"
               fillOpacity={0.7}
               barSize={20}
-              name="netIncome"
+              name="fcf"
             />
 
             {/* Revenue line */}
@@ -738,6 +912,16 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
               dot={{ fill: '#dc2626', strokeWidth: 2, r: 4 }}
               name="ebitda"
             />
+
+            {/* Net Income line (converted from bars) */}
+            <Line
+              type="monotone"
+              dataKey="netIncome"
+              stroke="#14b8a6"
+              strokeWidth={3}
+              dot={{ fill: '#14b8a6', strokeWidth: 2, r: 4 }}
+              name="netIncome"
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -747,16 +931,20 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
         {/* Data Series Legend */}
         <div className="flex justify-center gap-4 text-xs">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-teal-500 opacity-70 rounded"></div>
-            <span className="text-muted-foreground">Net Income</span>
+            <div className="w-3 h-3 bg-purple-500 opacity-70 rounded"></div>
+            <span className="text-muted-foreground">FCF (Bars)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-1 bg-blue-600 rounded"></div>
-            <span className="text-muted-foreground">Revenue</span>
+            <span className="text-muted-foreground">Revenue (Line)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-1 bg-red-600 rounded"></div>
-            <span className="text-muted-foreground">EBITDA</span>
+            <span className="text-muted-foreground">EBITDA (Line)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-1 bg-teal-500 rounded"></div>
+            <span className="text-muted-foreground">Net Income (Line)</span>
           </div>
         </div>
 
@@ -785,7 +973,7 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
 
       {/* Section KPIs */}
       <div className={`grid grid-cols-1 md:grid-cols-${sections.length} gap-2 mt-3`}>
-        {sections.map(section => {
+        {sections.map((section: string) => {
           let bgClass = "bg-muted";
           let textClass = "text-foreground";
 
@@ -806,7 +994,7 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
               <div className="text-xs text-muted-foreground mb-2">{insights[section]?.horizontal || '-'}</div>
               <div className="text-xs text-muted-foreground">Avg Revenue: {insights[section]?.avgRevenue || '-'}</div>
               <div className="text-xs text-muted-foreground">Avg EBITDA: {insights[section]?.avgEbitda || '-'}</div>
-              <div className="text-xs text-muted-foreground">Periods: {insights[section]?.periods || 0}</div>
+              <div className="text-xs text-muted-foreground">Periods: {insights[section]?.periods?.toLocaleString('en-US') || 0}</div>
             </div>
           );
         })}
@@ -814,7 +1002,7 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
 
       {/* Valuation Rows */}
       <div className={`grid grid-cols-1 md:grid-cols-${sections.length} gap-2 mt-2`}>
-        {sections.map(section => {
+        {sections.map((section: string) => {
           let bgClass = "bg-background";
           let textClass = "text-foreground";
           let borderClass = "border";
@@ -843,7 +1031,7 @@ const HistoricalAnalysisChart: React.FC<{ calculationResult: CalculationResult |
       </div>
 
       <div className={`grid grid-cols-1 md:grid-cols-${sections.length} gap-2 mt-2`}>
-        {sections.map(section => {
+        {sections.map((section: string) => {
           let bgClass = "bg-background";
           let textClass = "text-foreground";
           let borderClass = "border";
@@ -904,7 +1092,7 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
   const calculateDerivedRatios = () => {
     const incomeStatement = calculationResult.income_statement;
     const balanceSheet = calculationResult.balance_sheet;
-    
+
     if (!incomeStatement?.line_items || !balanceSheet?.line_items) {
       return {};
     }
@@ -926,20 +1114,20 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
 
     const incomeItems = incomeStatement.line_items;
     const balanceItems = balanceSheet.line_items;
-    
+
     // Extract key values
     const totalRevenue = findLineItemValue(incomeItems, ['total revenue', 'revenue']);
     const totalExpenses = findLineItemValue(incomeItems, ['total operating expenses', 'operating expenses']);
     const netIncome = findLineItemValue(incomeItems, ['net income']);
     const ebitda = findLineItemValue(incomeItems, ['ebitda']);
     const operatingIncome = findLineItemValue(incomeItems, ['operating income', 'ebit']);
-    
+
     const totalAssets = findLineItemValue(balanceItems, ['total assets']);
     const currentAssets = findLineItemValue(balanceItems, ['current assets']);
     const currentLiabilities = findLineItemValue(balanceItems, ['current liabilities']);
     const totalEquity = findLineItemValue(balanceItems, ['total equity', 'equity']);
     const totalLiabilities = findLineItemValue(balanceItems, ['total liabilities', 'liabilities']);
-    
+
     // Calculate derived ratios
     const derived = {
       gross_margin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue * 100) : 0,
@@ -959,25 +1147,25 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
   // KPIs based on actual available data from historical analysis
   const allKpis = [
     // PROFITABILITY RATIOS (Based on Income Statement)
-        {
-          name: 'Profit Margin',
-          value: dashboardKpis.profit_margin || 0,
-          unit: '%',
-          benchmark: { good: 15, average: 10, poor: 5 },
+    {
+      name: 'Profit Margin',
+      value: dashboardKpis.profit_margin || 0,
+      unit: '%',
+      benchmark: { good: 15, average: 10, poor: 5 },
       inverse: false,
-          icon: Percent
-        },
-        {
-          name: 'EBITDA Margin',
-          value: dashboardKpis.ebitda_margin || 0,
-          unit: '%',
-          benchmark: { good: 25, average: 15, poor: 10 },
+      icon: Percent
+    },
+    {
+      name: 'EBITDA Margin',
+      value: dashboardKpis.ebitda_margin || 0,
+      unit: '%',
+      benchmark: { good: 25, average: 15, poor: 10 },
       inverse: false,
-          icon: TrendingUp
-        },
-        {
+      icon: TrendingUp
+    },
+    {
       name: 'Gross Margin',
-      value: derivedRatios.gross_margin || 0,
+      value: dashboardKpis.gross_margin ?? derivedRatios.gross_margin ?? null,
       unit: '%',
       benchmark: { good: 60, average: 40, poor: 20 },
       inverse: false,
@@ -985,7 +1173,7 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     },
     {
       name: 'Operating Margin',
-      value: derivedRatios.operating_margin || 0,
+      value: dashboardKpis.operating_margin ?? derivedRatios.operating_margin ?? null,
       unit: '%',
       benchmark: { good: 20, average: 12, poor: 5 },
       inverse: false,
@@ -993,15 +1181,15 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     },
     {
       name: 'ROE',
-          value: dashboardKpis.roe || 0,
-          unit: '%',
-          benchmark: { good: 20, average: 15, poor: 10 },
+      value: dashboardKpis.roe || 0,
+      unit: '%',
+      benchmark: { good: 20, average: 15, poor: 10 },
       inverse: false,
-          icon: Crown
+      icon: Crown
     },
     {
       name: 'ROA',
-      value: derivedRatios.roa || 0,
+      value: dashboardKpis.roa ?? derivedRatios.roa ?? null,
       unit: '%',
       benchmark: { good: 10, average: 6, poor: 3 },
       inverse: false,
@@ -1009,17 +1197,17 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     },
 
     // LIQUIDITY RATIOS (Based on Balance Sheet)
-        {
-          name: 'Current Ratio',
-          value: dashboardKpis.current_ratio || 0,
-          unit: 'x',
-          benchmark: { good: 2.0, average: 1.5, poor: 1.0 },
+    {
+      name: 'Current Ratio',
+      value: dashboardKpis.current_ratio || 0,
+      unit: 'x',
+      benchmark: { good: 2.0, average: 1.5, poor: 1.0 },
       inverse: false,
-          icon: Activity
+      icon: Activity
     },
     {
       name: 'Working Capital',
-      value: derivedRatios.working_capital || 0,
+      value: dashboardKpis.working_capital ?? derivedRatios.working_capital ?? null,
       unit: '$',
       benchmark: { good: 100000, average: 50000, poor: 10000 },
       inverse: false,
@@ -1028,17 +1216,17 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     },
 
     // LEVERAGE RATIOS (Based on Balance Sheet)
-        {
-          name: 'Debt-to-Equity',
-          value: dashboardKpis.debt_to_equity || 0,
-          unit: 'x',
-          benchmark: { good: 0.3, average: 0.5, poor: 1.0 },
+    {
+      name: 'Debt-to-Equity',
+      value: dashboardKpis.debt_to_equity || 0,
+      unit: 'x',
+      benchmark: { good: 0.3, average: 0.5, poor: 1.0 },
       inverse: true,
       icon: CreditCard
     },
     {
       name: 'Debt Ratio',
-      value: derivedRatios.debt_ratio || 0,
+      value: dashboardKpis.debt_ratio ?? derivedRatios.debt_ratio ?? null,
       unit: '%',
       benchmark: { good: 30, average: 50, poor: 70 },
       inverse: true,
@@ -1046,7 +1234,7 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     },
     {
       name: 'Equity Ratio',
-      value: derivedRatios.equity_ratio || 0,
+      value: dashboardKpis.equity_ratio ?? derivedRatios.equity_ratio ?? null,
       unit: '%',
       benchmark: { good: 70, average: 50, poor: 30 },
       inverse: false,
@@ -1054,21 +1242,29 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     },
 
     // EFFICIENCY RATIOS (Based on Income Statement & Balance Sheet)
-        {
-          name: 'Asset Turnover',
-          value: dashboardKpis.asset_turnover || 0,
-          unit: 'x',
-          benchmark: { good: 1.5, average: 1.0, poor: 0.5 },
+    {
+      name: 'Asset Turnover',
+      value: dashboardKpis.asset_turnover || 0,
+      unit: 'x',
+      benchmark: { good: 1.5, average: 1.0, poor: 0.5 },
       inverse: false,
-          icon: BarChart3
+      icon: BarChart3
     },
     {
       name: 'Expense Ratio',
-      value: derivedRatios.expense_ratio || 0,
+      value: dashboardKpis.expense_ratio || derivedRatios.expense_ratio || 0,
       unit: '%',
       benchmark: { good: 50, average: 70, poor: 85 },
       inverse: true,
       icon: TrendingDown
+    },
+    {
+      name: 'Quick Ratio',
+      value: dashboardKpis.quick_ratio || 0,
+      unit: 'x',
+      benchmark: { good: 1.5, average: 1.0, poor: 0.5 },
+      inverse: false,
+      icon: Zap
     },
 
     // GROWTH & VALUATION RATIOS
@@ -1102,47 +1298,49 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     ...(companyType === 'service' ? [
       {
         name: 'Client Retention',
-          value: dashboardKpis.client_retention_rate || 0,
-          unit: '%',
-          benchmark: { good: 90, average: 80, poor: 70 },
+        value: dashboardKpis.client_retention_rate || 0,
+        unit: '%',
+        benchmark: { good: 90, average: 80, poor: 70 },
         inverse: false,
-          icon: UserCheck
-        },
-        {
-          name: 'Utilization Rate',
-          value: dashboardKpis.utilization_rate || 0,
-          unit: '%',
-          benchmark: { good: 85, average: 75, poor: 65 },
+        icon: UserCheck
+      },
+      {
+        name: 'Utilization Rate',
+        value: dashboardKpis.utilization_rate || 0,
+        unit: '%',
+        benchmark: { good: 85, average: 75, poor: 65 },
         inverse: false,
-          icon: Clock
-        },
-        {
+        icon: Clock
+      },
+      {
         name: 'CLV',
-          value: dashboardKpis.clv || 0,
-          unit: '$',
-          benchmark: { good: 50000, average: 25000, poor: 10000 },
+        value: dashboardKpis.clv || 0,
+        unit: '$',
+        benchmark: { good: 50000, average: 25000, poor: 10000 },
         inverse: false,
         icon: DollarSign,
-          format: 'currency'
-        },
-        {
+        format: 'currency'
+      },
+      {
         name: 'CAC',
-          value: dashboardKpis.cac || 0,
-          unit: '$',
-          benchmark: { good: 1000, average: 2000, poor: 5000 },
+        value: dashboardKpis.cac || 0,
+        unit: '$',
+        benchmark: { good: 1000, average: 2000, poor: 5000 },
         inverse: true,
         icon: MousePointer,
         format: 'currency'
       },
       {
         name: 'CLV/CAC Ratio',
-        value: dashboardKpis.clv > 0 && dashboardKpis.cac > 0 ? 
-               (dashboardKpis.clv / dashboardKpis.cac) : 0,
+        value: dashboardKpis.clv_cac_ratio ||
+          (dashboardKpis.clv > 0 && dashboardKpis.cac > 0 ?
+            (dashboardKpis.clv / dashboardKpis.cac) : 0),
         unit: 'x',
         benchmark: { good: 5.0, average: 3.0, poor: 1.5 },
         inverse: false,
         icon: CheckCircle
-      }
+      },
+
     ] : [])
   ];
 
@@ -1161,8 +1359,22 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
     }
   };
 
+  // Helper function to check if KPI has valid data
+  const hasValidData = (value: any) => {
+    return value !== null && value !== undefined && !isNaN(value);
+  };
+
+  // Helper function to check if KPI should be shown as N/A (missing critical input data)
+  const isDataMissing = (value: any) => {
+    return value === null || value === undefined || isNaN(value);
+  };
+
   // Helper function to format KPI values
   const formatKpiValue = (value: number, format?: string, unit?: string) => {
+    // Handle null/undefined/NaN values
+    if (value === null || value === undefined || isNaN(value)) {
+      return 'N/A';
+    }
     if (format === 'currency') {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -1188,26 +1400,34 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
       {/* Comprehensive KPI Grid - Name on top, value below with icons */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
         {allKpis.map((kpi, index) => {
-          const colorClass = getPerformanceColor(kpi.value, kpi.benchmark, kpi.inverse);
+          const isMissingData = isDataMissing(kpi.value);
+          const colorClass = isMissingData
+            ? 'text-gray-500 bg-gray-50 border-gray-200'
+            : getPerformanceColor(kpi.value, kpi.benchmark, kpi.inverse);
           const IconComponent = kpi.icon;
-          
+
           return (
             <div
               key={index}
-              className={`p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 ${colorClass}`}
+              className={`p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 ${colorClass} ${isMissingData ? 'opacity-60' : ''}`}
             >
               <div className="flex flex-col items-center text-center space-y-3">
                 {/* Icon */}
-                <IconComponent className="h-6 w-6 opacity-80" />
-                
+                <IconComponent className={`h-6 w-6 ${isMissingData ? 'opacity-40' : 'opacity-80'}`} />
+
                 {/* KPI Name */}
-                <h3 className="font-semibold text-sm leading-tight">
+                <h3 className={`font-semibold text-sm leading-tight ${isMissingData ? 'text-gray-400' : ''}`}>
                   {kpi.name}
                 </h3>
-                
+
                 {/* KPI Value */}
-                <div className="font-bold text-xl">
+                <div className={`font-bold text-xl ${isMissingData ? 'text-gray-400' : ''}`}>
                   {formatKpiValue(kpi.value, kpi.format, kpi.unit)}
+                  {isMissingData && (
+                    <div className="text-xs font-normal text-gray-400 mt-1">
+                      Data not available
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1220,40 +1440,55 @@ const RatioAnalysisTab: React.FC<{ calculationResult: CalculationResult | null }
 
 // FCF Over Time Chart Component
 const FCFOverTimeChart: React.FC<{ calculationResult: CalculationResult | null }> = ({ calculationResult }) => {
-  if (!calculationResult?.projections?.free_cash_flow) {
+  // Get FCF data from dashboard_kpis (new structure)
+  const dashboardKpis = calculationResult?.dashboard_kpis as any;
+
+  // Get FCF data from dashboard_kpis
+  const fcfValues = dashboardKpis?.free_cash_flow_all_years ||
+    dashboardKpis?.chart_data?.free_cash_flow_all_years;
+  const years = dashboardKpis?.chart_data?.years || [];
+
+  if (!fcfValues || !years || fcfValues.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">No FCF data available</p>
+        <p className="text-xs text-muted-foreground ml-2">
+          (Check dashboard_kpis.free_cash_flow_all_years)
+        </p>
       </div>
     );
   }
 
-  const fcfData = calculationResult.projections.free_cash_flow.map((value, index) => ({
-    year: `Year ${index + 1}`,
-    fcf: value / 1000, // Convert to thousands
+  const fcfData = fcfValues.map((value, index) => ({
+    year: years[index] || `Year ${index + 1}`,
+    fcf: value / 1000, // Convert to thousands for better readability
+    fcf_raw: value, // Keep raw value for tooltip
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={280}>
       <ComposedChart data={fcfData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="year" />
         <YAxis />
-        <Tooltip 
-          formatter={(value: number) => [`$${value.toFixed(0)}K`, 'Free Cash Flow']}
+        <Tooltip
+          formatter={(value: number, name: string, props: any) => {
+            const rawValue = props.payload?.fcf_raw || value * 1000;
+            return [`$${(rawValue).toLocaleString()}`, 'Free Cash Flow'];
+          }}
           labelFormatter={(label) => `${label}`}
         />
-        <Area 
-          type="monotone" 
-          dataKey="fcf" 
-          stroke={PRIMARY_COLOR} 
-          fill={PRIMARY_COLOR} 
+        <Area
+          type="monotone"
+          dataKey="fcf"
+          stroke={PRIMARY_COLOR}
+          fill={PRIMARY_COLOR}
           fillOpacity={0.3}
         />
-        <Line 
-          type="monotone" 
-          dataKey="fcf" 
-          stroke={PRIMARY_COLOR} 
+        <Line
+          type="monotone"
+          dataKey="fcf"
+          stroke={PRIMARY_COLOR}
           strokeWidth={2}
           dot={{ fill: PRIMARY_COLOR, strokeWidth: 2, r: 4 }}
         />
@@ -1264,50 +1499,35 @@ const FCFOverTimeChart: React.FC<{ calculationResult: CalculationResult | null }
 
 // Revenue vs Expense Donut Chart Component
 const RevenueExpenseDonutChart: React.FC<{ calculationResult: CalculationResult | null }> = ({ calculationResult }) => {
-  if (!calculationResult?.income_statement?.line_items) {
+  // Get donut chart data from dashboard_kpis
+
+  // Get donut chart data from dashboard_kpis (new structure)
+  const dashboardKpis = calculationResult?.dashboard_kpis as any;
+  const donutData = dashboardKpis?.donut_chart_data;
+
+  if (!donutData || !donutData.chart_data || donutData.chart_data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">No financial data available</p>
+        <p className="text-muted-foreground">No donut chart data available</p>
+        <p className="text-xs text-muted-foreground ml-2">
+          (Check dashboard_kpis.donut_chart_data)
+        </p>
       </div>
     );
   }
 
-  // Find revenue and total expenses
-  const incomeItems = calculationResult.income_statement.line_items;
-  const revenueItem = incomeItems.find((item: any) => 
-    ['total revenue', 'revenue'].some(keyword => 
-      item.label?.toLowerCase().includes(keyword)
-    )
-  );
-  
-  const expenseItem = incomeItems.find((item: any) => 
-    ['total operating expenses', 'operating expenses'].some(keyword => 
-      item.label?.toLowerCase().includes(keyword)
-    )
-  );
+  const chartData = donutData.chart_data;
+  const summary = donutData.summary || {};
 
-  if (!revenueItem || !expenseItem) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Insufficient data for chart</p>
-      </div>
-    );
-  }
+  // Convert backend data to format expected by PieChart (only Revenue vs Expenses)
+  const data = chartData.map((item: any) => ({
+    name: item.name,
+    value: item.value,
+    percentage: item.percentage,
+    color: item.color
+  }));
 
-  // Get base year values (current year) instead of latest forecast year
-  // If yearsInBusiness = 2, then years[1] = 2025 (base year), years[0] = 2024 (historical)
-  const baseYearIdx = 1; // Index 1 = 2025 (base year)
-  const revenue = revenueItem.values?.[baseYearIdx] || 0;
-  const expenses = expenseItem.values?.[baseYearIdx] || 0;
-  const netIncome = revenue - expenses;
-
-  const data = [
-    { name: 'Revenue', value: revenue, color: SUCCESS_COLOR },
-    { name: 'Expenses', value: expenses, color: EXPENSE_COLOR },
-    { name: 'Net Income', value: netIncome, color: PRIMARY_COLOR }
-  ].filter(item => item.value > 0);
-
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const total = data.reduce((sum: number, item: any) => sum + item.value, 0);
 
   return (
     <div className="space-y-4">
@@ -1326,28 +1546,38 @@ const RevenueExpenseDonutChart: React.FC<{ calculationResult: CalculationResult 
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip 
-            formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, 'Amount']}
+          <Tooltip
+            formatter={(value: number) => [`$${Number(value).toFixed(2)}`, 'Amount']}
           />
         </PieChart>
       </ResponsiveContainer>
-      
-      {/* Legend */}
-      <div className="space-y-2">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="font-medium">{item.name}</span>
+
+      {/* Legend with backend-calculated percentages */}
+      <div className="space-y-3">
+        <div className="space-y-2">
+          {data.map((item: any, index: number) => (
+            <div key={index} className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="font-medium">
+                  {item.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  ${Number(item.value).toFixed(2)}
+                </span>
+                <span className="font-medium text-muted-foreground">
+                  {item.percentage.toFixed(1)}%
+                </span>
+              </div>
             </div>
-            <span className="text-muted-foreground">
-              {((item.value / total) * 100).toFixed(1)}%
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
+
       </div>
     </div>
   );
@@ -1365,8 +1595,9 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
 
   const incomeStatement = calculationResult.income_statement;
   const balanceSheet = calculationResult.balance_sheet;
-  
-  if (!incomeStatement?.line_items || !balanceSheet?.line_items || !incomeStatement?.years) {
+  const dashboardKpis = calculationResult.dashboard_kpis;
+
+  if (!incomeStatement?.line_items || !balanceSheet?.line_items || !incomeStatement?.years || !dashboardKpis) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Insufficient data for horizontal and vertical analysis</p>
@@ -1375,6 +1606,10 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
   }
 
   const years = incomeStatement.years;
+
+  // Get year metadata from backend analysis (if available)
+  const verticalYearMetadata = dashboardKpis.vertical_analysis?.year_metadata;
+  const horizontalYearMetadata = dashboardKpis.horizontal_analysis?.year_metadata;
 
   // Helper function to calculate year-over-year growth
   const calculateHorizontalAnalysis = (values: number[]) => {
@@ -1400,52 +1635,64 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
   };
 
   // Get base line items for vertical analysis
-  const revenueItem = incomeStatement.line_items.find((item: any) => 
-    ['total revenue', 'revenue'].some(keyword => 
+  const revenueItem = incomeStatement.line_items.find((item: any) =>
+    ['total revenue', 'revenue'].some(keyword =>
       item.label?.toLowerCase().includes(keyword)
     )
   );
-  
-  const totalAssetsItem = balanceSheet.line_items.find((item: any) => 
+
+  const totalAssetsItem = balanceSheet.line_items.find((item: any) =>
     item.label?.toLowerCase().includes('total assets')
   );
 
-  // Prepare data for horizontal analysis
-  const horizontalData = incomeStatement.line_items
-    .filter((item: any) => item.label && !item.label.toLowerCase().includes('total'))
-    .slice(0, 8) // Limit to top 8 items for readability
-    .map((item: any) => ({
-      name: item.label,
-      values: item.values || [],
-      growth: calculateHorizontalAnalysis(item.values || [])
-    }));
+  // Prepare data for horizontal analysis - use backend data if available, otherwise calculate locally
+  const horizontalData = dashboardKpis.horizontal_analysis?.income_statement ||
+    incomeStatement.line_items
+      .filter((item: any) => item.label && !item.is_spacer) // Remove spacer rows
+      .slice(0, 15) // Show more items to include headers and sub-items
+      .map((item: any) => ({
+        name: item.label,
+        values: item.values || [],
+        growth: calculateHorizontalAnalysis(item.values || []),
+        isHeader: item.is_header || false,
+        isSubItem: item.is_sub_item || false,
+        isTotal: item.is_total || false
+      }));
 
-  // Prepare data for vertical analysis (Income Statement)
-  const verticalIncomeData = incomeStatement.line_items
-    .filter((item: any) => item.label && !item.label.toLowerCase().includes('total'))
-    .slice(0, 8)
-    .map((item: any) => ({
-      name: item.label,
-      values: item.values || [],
-      percentages: revenueItem ? calculateVerticalAnalysis(item.values || [], revenueItem.values || []) : []
-    }));
+  // Prepare data for vertical analysis (Income Statement) - use backend data if available
+  const verticalIncomeData = dashboardKpis.vertical_analysis?.income_statement ||
+    incomeStatement.line_items
+      .filter((item: any) => item.label && !item.is_spacer) // Remove spacer rows
+      .slice(0, 12)
+      .map((item: any) => ({
+        name: item.label,
+        values: item.values || [],
+        percentages: revenueItem ? calculateVerticalAnalysis(item.values || [], revenueItem.values || []) : [],
+        isHeader: item.is_header || false,
+        isSubItem: item.is_sub_item || false,
+        isTotal: item.is_total || false
+      }));
 
-  // Prepare data for vertical analysis (Balance Sheet)
-  const verticalBalanceData = balanceSheet.line_items
-    .filter((item: any) => item.label && !item.label.toLowerCase().includes('total'))
-    .slice(0, 8)
-    .map((item: any) => ({
-      name: item.label,
-      values: item.values || [],
-      percentages: totalAssetsItem ? calculateVerticalAnalysis(item.values || [], totalAssetsItem.values || []) : []
-    }));
+  // Prepare data for vertical analysis (Balance Sheet) - use backend data if available
+  const verticalBalanceData = dashboardKpis.vertical_analysis?.balance_sheet ||
+    balanceSheet.line_items
+      .filter((item: any) => item.label && !item.is_spacer) // Remove spacer rows
+      .slice(0, 12)
+      .map((item: any) => ({
+        name: item.label,
+        values: item.values || [],
+        percentages: totalAssetsItem ? calculateVerticalAnalysis(item.values || [], totalAssetsItem.values || []) : [],
+        isHeader: item.is_header || false,
+        isSubItem: item.is_sub_item || false,
+        isTotal: item.is_total || false
+      }));
 
   // Format currency
   const formatCurrency = (value: number) => {
     if (Math.abs(value) >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
     } else if (Math.abs(value) >= 1000) {
-      return `$${(value / 1000).toFixed(0)}K`;
+      return `$${(value / 1000).toFixed(1)}K`;
     } else {
       return `$${value.toFixed(0)}`;
     }
@@ -1454,11 +1701,11 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
   // Format percentage with color coding
   const formatPercentage = (value: number | null, type: 'growth' | 'vertical' = 'growth') => {
     if (value === null || value === undefined) return 'N/A';
-    
-    const colorClass = type === 'growth' 
+
+    const colorClass = type === 'growth'
       ? value > 0 ? 'text-green-600' : value < 0 ? 'text-red-600' : 'text-gray-600'
       : 'text-blue-600';
-    
+
     return <span className={colorClass}>{value.toFixed(1)}%</span>;
   };
 
@@ -1493,23 +1740,53 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
                 </tr>
               </thead>
               <tbody>
-                {horizontalData.map((item, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium">{item.name}</td>
-                    {years.map((year: string, yearIdx: number) => (
-                      <td key={year} className="text-center p-3">
-                        <div className="text-sm font-semibold">
-                          {formatCurrency(item.values[yearIdx] || 0)}
-      </div>
-                        {yearIdx > 0 && (
-                          <div className="text-sm">
-                            {formatPercentage(item.growth[yearIdx], 'growth')}
-                          </div>
-                        )}
+                {horizontalData.map((item, idx) => {
+                  // Determine row styling based on item type
+                  let rowClass = "border-b hover:bg-gray-50";
+                  let cellClass = "p-3";
+                  let nameClass = "font-medium";
+
+                  if (item.isHeader) {
+                    rowClass = "border-b bg-blue-50 hover:bg-blue-100";
+                    cellClass = "p-3 font-bold";
+                    nameClass = "font-bold text-blue-900";
+                  } else if (item.isSubItem) {
+                    rowClass = "border-b hover:bg-gray-50";
+                    cellClass = "p-3 pl-6"; // Indent sub-items
+                    nameClass = "font-medium text-gray-700";
+                  } else if (item.isTotal) {
+                    rowClass = "border-b bg-gray-100 hover:bg-gray-200";
+                    cellClass = "p-3 font-semibold";
+                    nameClass = "font-semibold text-gray-900";
+                  }
+
+                  return (
+                    <tr key={idx} className={rowClass}>
+                      <td className={`${cellClass} ${nameClass}`}>
+                        {item.isHeader ? item.name.toUpperCase() : item.name}
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                      {years.map((year: string, yearIdx: number) => (
+                        <td key={year} className={`text-center ${cellClass}`}>
+                          {item.isHeader ? (
+                            // Headers don't show values, just empty cells
+                            <div className="text-sm"></div>
+                          ) : (
+                            <>
+                              <div className="text-sm font-semibold">
+                                {formatCurrency(item.values[yearIdx] || 0)}
+                              </div>
+                              {yearIdx > 0 && (
+                                <div className="text-sm">
+                                  {formatPercentage(item.growth[yearIdx], 'growth')}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1543,21 +1820,49 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
                   </tr>
                 </thead>
                 <tbody>
-                  {verticalIncomeData.map((item, idx) => (
-                    <tr key={idx} className="border-b hover:bg-gray-50">
-                      <td className="p-2 text-sm font-medium">{item.name}</td>
-                      {years.map((year: string, yearIdx: number) => (
-                        <td key={year} className="text-center p-2">
-                          <div className="text-xs">
-                            {formatPercentage(item.percentages[yearIdx], 'vertical')}
-                    </div>
+                  {verticalIncomeData.map((item, idx) => {
+                    // Determine row styling based on item type
+                    let rowClass = "border-b hover:bg-gray-50";
+                    let cellClass = "p-2";
+                    let nameClass = "text-sm font-medium";
+
+                    if (item.isHeader) {
+                      rowClass = "border-b bg-blue-50 hover:bg-blue-100";
+                      cellClass = "p-2 font-bold";
+                      nameClass = "text-sm font-bold text-blue-900";
+                    } else if (item.isSubItem) {
+                      rowClass = "border-b hover:bg-gray-50";
+                      cellClass = "p-2 pl-4"; // Indent sub-items
+                      nameClass = "text-sm font-medium text-gray-700";
+                    } else if (item.isTotal) {
+                      rowClass = "border-b bg-gray-100 hover:bg-gray-200";
+                      cellClass = "p-2 font-semibold";
+                      nameClass = "text-sm font-semibold text-gray-900";
+                    }
+
+                    return (
+                      <tr key={idx} className={rowClass}>
+                        <td className={`${cellClass} ${nameClass}`}>
+                          {item.isHeader ? item.name.toUpperCase() : item.name}
                         </td>
-                      ))}
-                    </tr>
-                  ))}
+                        {years.map((year: string, yearIdx: number) => (
+                          <td key={year} className={`text-center ${cellClass}`}>
+                            {item.isHeader ? (
+                              // Headers don't show values, just empty cells
+                              <div className="text-xs"></div>
+                            ) : (
+                              <div className="text-xs">
+                                {formatPercentage(item.percentages[yearIdx], 'vertical')}
+                              </div>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-                    </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -1586,18 +1891,46 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
                   </tr>
                 </thead>
                 <tbody>
-                  {verticalBalanceData.map((item, idx) => (
-                    <tr key={idx} className="border-b hover:bg-gray-50">
-                      <td className="p-2 text-sm font-medium">{item.name}</td>
-                      {years.map((year: string, yearIdx: number) => (
-                        <td key={year} className="text-center p-2">
-                          <div className="text-xs">
-                            {formatPercentage(item.percentages[yearIdx], 'vertical')}
-                  </div>
+                  {verticalBalanceData.map((item, idx) => {
+                    // Determine row styling based on item type
+                    let rowClass = "border-b hover:bg-gray-50";
+                    let cellClass = "p-2";
+                    let nameClass = "text-sm font-medium";
+
+                    if (item.isHeader) {
+                      rowClass = "border-b bg-blue-50 hover:bg-blue-100";
+                      cellClass = "p-2 font-bold";
+                      nameClass = "text-sm font-bold text-blue-900";
+                    } else if (item.isSubItem) {
+                      rowClass = "border-b hover:bg-gray-50";
+                      cellClass = "p-2 pl-4"; // Indent sub-items
+                      nameClass = "text-sm font-medium text-gray-700";
+                    } else if (item.isTotal) {
+                      rowClass = "border-b bg-gray-100 hover:bg-gray-200";
+                      cellClass = "p-2 font-semibold";
+                      nameClass = "text-sm font-semibold text-gray-900";
+                    }
+
+                    return (
+                      <tr key={idx} className={rowClass}>
+                        <td className={`${cellClass} ${nameClass}`}>
+                          {item.isHeader ? item.name.toUpperCase() : item.name}
                         </td>
-                      ))}
-                    </tr>
-                  ))}
+                        {years.map((year: string, yearIdx: number) => (
+                          <td key={year} className={`text-center ${cellClass}`}>
+                            {item.isHeader ? (
+                              // Headers don't show values, just empty cells
+                              <div className="text-xs"></div>
+                            ) : (
+                              <div className="text-xs">
+                                {formatPercentage(item.percentages[yearIdx], 'vertical')}
+                              </div>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1614,17 +1947,27 @@ const HorizontalVerticalAnalysisTab: React.FC<{ calculationResult: CalculationRe
 const normalizeCalculationResult = (data: any): CalculationResult | null => {
   if (!data) return null;
 
+  console.log('normalizeCalculationResult: Input data:', {
+    hasData: !!data,
+    keys: data ? Object.keys(data) : [],
+    hasNestedData: !!(data as any)?.data,
+    hasDashboardKpis: !!(data as any)?.dashboard_kpis,
+    dashboardKpisKeys: (data as any)?.dashboard_kpis ? Object.keys((data as any).dashboard_kpis) : []
+  });
+
   // Handle both nested and direct data structures
   // If data has a nested 'data' property, use that; otherwise use data directly
   const calculationData = data.data || data;
 
+  console.log('normalizeCalculationResult: Calculation data:', {
+    keys: calculationData ? Object.keys(calculationData) : [],
+    hasDashboardKpis: !!(calculationData as any)?.dashboard_kpis,
+    dashboardKpisKeys: (calculationData as any)?.dashboard_kpis ? Object.keys((calculationData as any).dashboard_kpis) : [],
+    totalExpenses: (calculationData as any)?.dashboard_kpis?.total_expenses
+  });
+
   // Check if dashboard_kpis is in the data structure
-  if (calculationData.dashboard_kpis) {
-    console.log('✅ Found dashboard_kpis in calculation data:', calculationData.dashboard_kpis);
-  } else {
-    console.log('❌ dashboard_kpis not found in calculation data');
-    console.log('Available keys:', Object.keys(calculationData));
-  }
+  // dashboard_kpis will be preserved if found
 
   // For historical data, the structure might be different
   // Check if we have the historical format with nested statements
@@ -1673,7 +2016,7 @@ const normalizeCalculationResult = (data: any): CalculationResult | null => {
       free_cash_flow: []
     };
 
-    return {
+    const result = {
       income_statement: incomeStatement,
       balance_sheet: balanceSheet,
       cash_flow: cashFlow || null,
@@ -1687,6 +2030,14 @@ const normalizeCalculationResult = (data: any): CalculationResult | null => {
       // IMPORTANT: Preserve dashboard_kpis from backend
       dashboard_kpis: calculationData.dashboard_kpis || {}
     };
+
+    console.log('normalizeCalculationResult: Returning nested format result:', {
+      hasDashboardKpis: !!result.dashboard_kpis,
+      dashboardKpisKeys: result.dashboard_kpis ? Object.keys(result.dashboard_kpis) : [],
+      totalExpenses: result.dashboard_kpis?.total_expenses
+    });
+
+    return result;
   } else {
     // Direct format (statements not nested)
     // Ensure required fields exist
@@ -1732,7 +2083,7 @@ const normalizeCalculationResult = (data: any): CalculationResult | null => {
       free_cash_flow: []
     };
 
-    return {
+    const result = {
       income_statement: incomeStatement,
       balance_sheet: balanceSheet,
       cash_flow: cashFlow || null,
@@ -1746,6 +2097,14 @@ const normalizeCalculationResult = (data: any): CalculationResult | null => {
       // IMPORTANT: Preserve dashboard_kpis from backend
       dashboard_kpis: calculationData.dashboard_kpis || {}
     };
+
+    console.log('normalizeCalculationResult: Returning direct format result:', {
+      hasDashboardKpis: !!result.dashboard_kpis,
+      dashboardKpisKeys: result.dashboard_kpis ? Object.keys(result.dashboard_kpis) : [],
+      totalExpenses: result.dashboard_kpis?.total_expenses
+    });
+
+    return result;
   }
 };
 
@@ -1756,8 +2115,15 @@ function mapHistoricalResultsToDashboardData(results: CalculationResult | null) 
   // Use the new dashboard_kpis from backend (should be preserved by normalization)
   const dashboardKpis = results.dashboard_kpis || {};
 
-  // Show dashboard KPIs from backend
-  console.log('Dashboard KPIs from backend:', dashboardKpis);
+  console.log('mapHistoricalResultsToDashboardData: Input results:', {
+    hasResults: !!results,
+    hasDashboardKpis: !!results?.dashboard_kpis,
+    dashboardKpisKeys: results?.dashboard_kpis ? Object.keys(results.dashboard_kpis) : [],
+    totalExpenses: results?.dashboard_kpis?.total_expenses,
+    totalRevenue: results?.dashboard_kpis?.total_revenue
+  });
+
+  // Dashboard KPIs from backend
 
   // Overview data from dashboard KPIs
   const overview = {
@@ -1825,27 +2191,120 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
   const [sensitivityScenario, setSensitivityScenario] = useState('base');
   const [companyType, setCompanyType] = useState('service'); // This could come from form data
 
-  // Generate sensitivity values based on company type
+  // Generate sensitivity values based on company type and real financial data
   const generateSensitivityValues = (type: string) => {
     const params = getSensitivityParameters(type);
     const scenarios: any = { base: {}, best: {}, worst: {} };
 
+    // Generate sensitivity values for company type
     Object.keys(params).forEach(key => {
       const param = params[key as keyof typeof params];
-      scenarios.base[key] = param.base;
+
+      // For base case, use the same values that backend used for base case calculations
+      let realBaseValue = param.base; // Default to 0 if no real data
+
+      if (calculationResult?.dashboard_kpis?.base_case_assumptions) {
+        // Use the exact same assumptions backend used for base case calculations
+        const baseAssumptions = calculationResult.dashboard_kpis.base_case_assumptions;
+
+        // Debug: Log what assumptions are being used
+        console.log(`[DEBUG] Parameter ${key}:`, {
+          baseAssumptions,
+          revenue_growth_rate: baseAssumptions.revenue_growth_rate,
+          discount_rate: baseAssumptions.discount_rate,
+          terminal_growth_rate: baseAssumptions.terminal_growth_rate,
+          tax_rate: baseAssumptions.tax_rate,
+          client_retention_rate: baseAssumptions.client_retention_rate
+        });
+
+        switch (key) {
+          case 'revenueGrowth':
+            realBaseValue = (baseAssumptions.revenue_growth_rate || 0) * 100;
+            break;
+
+          case 'operatingMargin':
+          case 'grossMargin':
+            // Extract margin from KPIs or calculate from income statement
+            const marginValue = calculationResult.dashboard_kpis?.operating_margin ||
+              calculationResult.kpis?.operating_margin || 0;
+            realBaseValue = marginValue || 0;
+            break;
+
+          case 'taxRate':
+            realBaseValue = (baseAssumptions.tax_rate || 0.25) * 100;
+            break;
+
+          case 'wacc':
+            realBaseValue = (baseAssumptions.discount_rate || 0.12) * 100;
+            break;
+
+          case 'terminalGrowth':
+            realBaseValue = (baseAssumptions.terminal_growth_rate || 0.03) * 100;
+            break;
+
+          case 'workingCapitalDays':
+            realBaseValue = 45; // Default 45 days
+            break;
+
+          case 'clientRetention':
+            realBaseValue = (baseAssumptions.client_retention_rate || 0.85) * 100;
+            break;
+        }
+
+        console.log(`[DEBUG] Final value for ${key}:`, realBaseValue);
+      }
+
+      // Set base case to real value, best/worst to parameter ranges
+      scenarios.base[key] = realBaseValue;
       scenarios.best[key] = param.best;
       scenarios.worst[key] = param.worst;
     });
+
+    // Debug: Log final sensitivity values
+    console.log('[DEBUG] Final sensitivity scenarios:', scenarios);
 
     return scenarios;
   };
 
   const [sensitivityValues, setSensitivityValues] = useState(() => generateSensitivityValues(companyType));
+  const [sensitivityUpdateTrigger, setSensitivityUpdateTrigger] = useState(0);
 
   // Update sensitivity values when company type changes
   useEffect(() => {
     setSensitivityValues(generateSensitivityValues(companyType));
   }, [companyType]);
+
+  // Regenerate sensitivity values when calculation result changes (to get real base case values)
+  useEffect(() => {
+    if (calculationResult) {
+      // Debug: Check what base case assumptions are available
+      console.log('[DEBUG] Base case assumptions:', calculationResult.dashboard_kpis?.base_case_assumptions);
+      console.log('[DEBUG] Base case values:', {
+        enterprise: calculationResult.dashboard_kpis?.base_case_enterprise_value,
+        equity: calculationResult.dashboard_kpis?.base_case_equity_value,
+        npv: calculationResult.dashboard_kpis?.base_case_npv
+      });
+
+      // Regenerating sensitivity values with real data
+      setSensitivityValues(generateSensitivityValues(companyType));
+    }
+  }, [calculationResult, companyType]);
+
+  // Alternative: Direct state update without complex nesting
+  const updateParameter = (paramKey: string, value: number) => {
+    // Updating parameter
+
+    setSensitivityValues(currentState => {
+      const newState = JSON.parse(JSON.stringify(currentState)); // Deep clone
+      newState[sensitivityScenario][paramKey] = value;
+      // Sensitivity values updated
+      return newState;
+    });
+
+    // Trigger re-render of KPIs and charts
+    setSensitivityUpdateTrigger(prev => prev + 1);
+    // Re-render triggered
+  };
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const toastShownRef = useRef(false);
 
@@ -1854,26 +2313,38 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
     if (!calculationResult) {
       // Try context first (primary)
       if (historicalCalculationResult) {
-        console.log('=== LOADING FROM CONTEXT ===');
-        console.log('Context data type:', typeof historicalCalculationResult);
-        console.log('Context data keys:', Object.keys(historicalCalculationResult));
-        console.log('Has dashboard_kpis in context?', 'dashboard_kpis' in historicalCalculationResult);
-        console.log('Context dashboard_kpis value:', (historicalCalculationResult as any).dashboard_kpis);
+        // Loading from context
+        console.log('HistoricalDashboard: Loading from context:', {
+          hasHistoricalResult: !!historicalCalculationResult,
+          keys: historicalCalculationResult ? Object.keys(historicalCalculationResult) : [],
+          hasData: !!(historicalCalculationResult as any)?.data,
+          hasDashboardKpis: !!(historicalCalculationResult as any)?.dashboard_kpis
+        });
 
         // Check nested data structure (raw API response)
         const rawData = historicalCalculationResult as any;
         if (rawData.data) {
-          console.log('Has dashboard_kpis in data.data?', 'dashboard_kpis' in rawData.data);
-          console.log('data.data.dashboard_kpis:', rawData.data.dashboard_kpis);
+          // Checking nested data structure
+          console.log('HistoricalDashboard: Found nested data structure:', {
+            dataKeys: Object.keys(rawData.data),
+            hasDashboardKpis: !!rawData.data.dashboard_kpis,
+            dashboardKpisKeys: rawData.data.dashboard_kpis ? Object.keys(rawData.data.dashboard_kpis) : []
+          });
         }
 
         const normalized = normalizeCalculationResult(historicalCalculationResult);
         if (normalized) {
-          console.log('=== AFTER NORMALIZATION ===');
-          console.log('Normalized data keys:', Object.keys(normalized));
-          console.log('Has dashboard_kpis in normalized?', 'dashboard_kpis' in normalized);
-          console.log('Normalized dashboard_kpis:', normalized.dashboard_kpis);
+          // Data normalized
+          console.log('HistoricalDashboard: Data normalized successfully:', {
+            hasIncomeStatement: !!normalized.income_statement,
+            hasBalanceSheet: !!normalized.balance_sheet,
+            hasDashboardKpis: !!normalized.dashboard_kpis,
+            dashboardKpisKeys: normalized.dashboard_kpis ? Object.keys(normalized.dashboard_kpis) : [],
+            totalExpenses: normalized.dashboard_kpis?.total_expenses
+          });
           setCalculationResult(normalized);
+        } else {
+          console.error('HistoricalDashboard: Failed to normalize calculation result');
         }
       } else {
         // Fallback to localStorage (backup)
@@ -1881,26 +2352,29 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            console.log('=== LOADING FROM LOCALSTORAGE ===');
-            console.log('LocalStorage data keys:', Object.keys(parsed));
-            console.log('Has dashboard_kpis in localStorage?', 'dashboard_kpis' in parsed);
-            console.log('LocalStorage dashboard_kpis:', parsed.dashboard_kpis);
+            // Loading from localStorage
+            console.log('HistoricalDashboard: Loading from localStorage:', {
+              hasData: !!parsed,
+              keys: parsed ? Object.keys(parsed) : [],
+              hasDashboardKpis: !!parsed?.dashboard_kpis
+            });
 
             // Normalize the data structure
             const normalized = normalizeCalculationResult(parsed);
             if (normalized) {
-              console.log('=== AFTER LOCALSTORAGE NORMALIZATION ===');
-              console.log('Normalized data keys:', Object.keys(normalized));
-              console.log('Has dashboard_kpis in normalized?', 'dashboard_kpis' in normalized);
-              console.log('Normalized dashboard_kpis:', normalized.dashboard_kpis);
+              // Data normalized from localStorage
+              console.log('HistoricalDashboard: Data normalized from localStorage:', {
+                hasDashboardKpis: !!normalized.dashboard_kpis,
+                totalExpenses: normalized.dashboard_kpis?.total_expenses
+              });
               setCalculationResult(normalized);
             } else {
-              console.error('Failed to normalize calculation result for dashboard');
+              console.error('HistoricalDashboard: Failed to normalize calculation result for dashboard');
               // Clear invalid data
               localStorage.removeItem('historical_calculation_result');
             }
           } catch (error) {
-            console.error('Failed to parse stored calculation result:', error);
+            console.error('HistoricalDashboard: Failed to parse stored calculation result:', error);
             // Clear corrupted data
             localStorage.removeItem('historical_calculation_result');
           }
@@ -1909,10 +2383,139 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
     }
   }, [calculationResult, historicalCalculationResult]);
 
-  const dashboardData = useMemo(() =>
-    mapHistoricalResultsToDashboardData(calculationResult),
-    [calculationResult]
-  );
+  const dashboardData = useMemo(() => {
+    console.log('HistoricalDashboard: Recalculating dashboard data:', {
+      hasCalculationResult: !!calculationResult,
+      hasDashboardKpis: !!calculationResult?.dashboard_kpis,
+      totalExpenses: calculationResult?.dashboard_kpis?.total_expenses
+    });
+    return mapHistoricalResultsToDashboardData(calculationResult);
+  }, [calculationResult]);
+
+  // Revenue & Profitability Chart Data with sensitivity analysis
+  const getRevenueProfitabilityChartData = () => {
+    if (!calculationResult) return [];
+
+    // Extract real data from financial statements
+    const incomeStatement = calculationResult.income_statement;
+    const years = incomeStatement?.years || [];
+    const lineItems = incomeStatement?.line_items || [];
+
+    // Helper function to find values from line items
+    const findLineItemValues = (keywords: string[]) => {
+      for (const keyword of keywords) {
+        for (const item of lineItems) {
+          const label = item.label || '';
+          if (label === keyword) {
+            return item.values || [];
+          }
+        }
+      }
+
+      for (const keyword of keywords) {
+        for (const item of lineItems) {
+          const label = item.label || '';
+          if (label.toLowerCase().includes(keyword.toLowerCase())) {
+            return item.values || [];
+          }
+        }
+      }
+
+      return Array(years.length).fill(0);
+    };
+
+    // Extract financial data
+    const revenueValues = findLineItemValues(['TOTAL REVENUE', 'total revenue', 'revenue']);
+    const netIncomeValues = findLineItemValues(['NET INCOME', 'net income']);
+    const ebitdaValues = findLineItemValues(['EBITDA', 'ebitda']);
+
+    // Get current parameter values for the selected scenario
+    const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+    // Create chart data with real values and enhanced sensitivity analysis
+    const chartData = years.map((year: string, index: number) => {
+      const currentYear = new Date().getFullYear();
+      const yearNum = parseInt(year);
+
+      let section = 'historical';
+      if (yearNum === currentYear) {
+        section = 'current';
+      } else if (yearNum > currentYear) {
+        section = 'forecast';
+      }
+
+      // Get base values (keep original values, no conversion)
+      const baseRevenue = revenueValues[index] || 0;
+      const baseEbitda = ebitdaValues[index] || 0;
+      const baseNetIncome = netIncomeValues[index] || 0;
+
+      // Apply sensitivity parameter multipliers only to forecast years
+      let revenueMultiplier = 1;
+      let ebitdaMultiplier = 1;
+      let netIncomeMultiplier = 1;
+
+      if (section === 'forecast') {
+        // Calculate years into the future for compounding effects
+        const yearsIntoFuture = yearNum - currentYear;
+
+        // Revenue Growth impact (compound over years with diminishing returns)
+        const revenueGrowthRate = (currentParams.revenueGrowth || 0) / 100;
+        const compoundedRevenueGrowth = Math.pow(1 + revenueGrowthRate, Math.min(yearsIntoFuture, 5)); // Cap at 5 years for realism
+        revenueMultiplier = 1 + (compoundedRevenueGrowth - 1) * 0.8; // Apply 80% of compounded growth for realism
+
+        // Operating Margin impact on EBITDA (improves over time with scale)
+        const marginImpact = (currentParams.operatingMargin || 0) / 100;
+        const scaleEfficiency = Math.min(yearsIntoFuture * 0.1, 0.3); // Efficiency improves up to 30% over time
+        ebitdaMultiplier = 1 + marginImpact + (revenueGrowthRate * 0.5) + scaleEfficiency;
+
+        // Enhanced Net Income calculation with multiple parameter impacts
+        const taxImpact = -(currentParams.taxRate || 0) / 100; // Negative tax change increases net income
+        const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.3; // Client retention helps net income
+        const workingCapitalImpact = -(currentParams.workingCapitalDays || 0) / 365 * 0.1; // Lower WC days = higher efficiency
+        const waccImpact = -(currentParams.wacc || 0) / 100 * 0.2; // Lower WACC improves financing efficiency
+
+        // Net income benefits from all operational improvements
+        netIncomeMultiplier = 1 + marginImpact + taxImpact + retentionImpact +
+          (revenueGrowthRate * 0.7) + workingCapitalImpact + waccImpact;
+
+        // Terminal growth impact (becomes more significant in later forecast years)
+        if (yearsIntoFuture >= 3) {
+          const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * (yearsIntoFuture - 2) * 0.5;
+          revenueMultiplier += terminalImpact;
+          ebitdaMultiplier += terminalImpact * 0.8;
+          netIncomeMultiplier += terminalImpact * 0.6;
+        }
+
+        // Ensure positive values with reasonable bounds
+        revenueMultiplier = Math.max(0.1, Math.min(revenueMultiplier, 5.0)); // Max 5x growth
+        ebitdaMultiplier = Math.max(0.1, Math.min(ebitdaMultiplier, 4.0)); // Max 4x growth
+        netIncomeMultiplier = Math.max(0.1, Math.min(netIncomeMultiplier, 3.0)); // Max 3x growth
+      }
+
+
+
+      const chartItem = {
+        year,
+        section,
+        revenue: Math.max(0, baseRevenue * revenueMultiplier),
+        ebitda: Math.max(0, baseEbitda * ebitdaMultiplier),
+        netIncome: Math.max(0, baseNetIncome * netIncomeMultiplier),
+        // Add debug info for tooltip
+        baseRevenue: baseRevenue,
+        baseEbitda: baseEbitda,
+        baseNetIncome: baseNetIncome,
+        revenueMultiplier: revenueMultiplier,
+        ebitdaMultiplier: ebitdaMultiplier,
+        netIncomeMultiplier: netIncomeMultiplier
+      };
+
+      return chartItem;
+    });
+
+    return chartData;
+  };
+
+
 
   // Show success message when dashboard loads with data (only once)
   useEffect(() => {
@@ -2263,15 +2866,15 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
 
                   {/* New Row: FCF Over Time and Revenue vs Expense Donut Chart */}
                   <div className="lg:col-span-5 mt-6">
-                    <div className="grid grid-cols-12 gap-6">
+                    <div className="grid grid-cols-12 gap-6 items-stretch">
                       {/* FCF Over Time Chart - 75% width (9 columns) */}
                       <div className="col-span-9">
-                        <Card>
+                        <Card className="h-full">
                           <CardHeader>
                             <CardTitle>Free Cash Flow Over Time</CardTitle>
                             <p className="text-sm text-muted-foreground">Projected cash flow trends</p>
                           </CardHeader>
-                          <CardContent>
+                          <CardContent className="h-full">
                             <FCFOverTimeChart calculationResult={calculationResult} />
                           </CardContent>
                         </Card>
@@ -2279,7 +2882,7 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
 
                       {/* Revenue vs Expense Donut Chart - 25% width (3 columns) */}
                       <div className="col-span-3">
-                        <Card>
+                        <Card className="h-full">
                           <CardHeader>
                             <CardTitle>Revenue vs Expenses</CardTitle>
                             <p className="text-sm text-muted-foreground">Percentage breakdown</p>
@@ -2313,7 +2916,7 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                         </CardHeader>
                         <CardContent>
                           <SensitivityHeatmap
-                            data={[]}
+                            data={calculationResult?.dashboard_kpis?.sensitivity_heatmap_data || []}
                             balanceSheetData={calculationResult?.balance_sheet}
                           />
                         </CardContent>
@@ -2324,7 +2927,7 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                           <CardTitle>Tornado Analysis</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <TornadoChart data={[]} />
+                          <TornadoChart data={calculationResult?.dashboard_kpis?.tornado_chart_data || []} />
                         </CardContent>
                       </Card>
                     </div>
@@ -2370,92 +2973,92 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     <p className="text-sm text-muted-foreground">
                       Adjust key variables to see impact on valuation ({sensitivityScenario.charAt(0).toUpperCase() + sensitivityScenario.slice(1)} Case)
                     </p>
+
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(getSensitivityParameters(companyType)).map(([key, param]) => (
-                        <div key={key} className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <Label className="text-sm font-medium text-gray-900">{param.label}</Label>
-                            <div className={`flex items-center px-2 py-1 rounded ${sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key] > 0
-                              ? 'bg-green-100'
-                              : sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key] < 0
-                                ? 'bg-red-100'
-                                : 'bg-gray-100'
-                              }`}>
-                              <input
-                                type="number"
-                                step={0.1}
-                                min={param.worst}
-                                max={param.best}
-                                value={sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key]}
-                                onChange={(e) => {
-                                  const newValue = parseFloat(e.target.value) || 0;
-                                  // Clamp value within bounds
-                                  const clampedValue = Math.max(param.worst, Math.min(param.best, newValue));
-                                  setSensitivityValues(prev => ({
-                                    ...prev,
-                                    [sensitivityScenario]: {
-                                      ...prev[sensitivityScenario as keyof typeof prev],
-                                      [key]: clampedValue
+                      {Object.entries(getSensitivityParameters(companyType)).map(([key, param]) => {
+                        // Get current value with fallback
+                        const currentValue = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues]?.[key] ?? param.base;
+
+                        return (
+                          <div key={`${key}-${sensitivityScenario}`} className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <Label className="text-sm font-medium text-gray-900">{param.label}</Label>
+                              <div className={`flex items-center px-2 py-1 rounded ${currentValue > 0
+                                ? 'bg-green-100'
+                                : currentValue < 0
+                                  ? 'bg-red-100'
+                                  : 'bg-gray-100'
+                                }`}>
+                                <input
+
+                                  type="number"
+                                  step={0.1}
+                                  min={Math.min(param.worst, param.best)}
+                                  max={Math.max(param.worst, param.best)}
+                                  value={currentValue}
+                                  onChange={(e) => {
+                                    const rawValue = e.target.value;
+                                    const newValue = parseFloat(rawValue);
+                                    if (!isNaN(newValue)) {
+                                      const clampedValue = Math.max(Math.min(param.worst, param.best), Math.min(Math.max(param.worst, param.best), newValue));
+                                      updateParameter(key, clampedValue);
                                     }
-                                  }));
-                                }}
-                                className={`w-12 text-center text-sm font-bold bg-transparent border-none outline-none ${sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key] > 0
+                                  }}
+                                  className={`w-12 text-center text-sm font-bold bg-transparent border-none outline-none ${currentValue > 0
+                                    ? 'text-green-700'
+                                    : currentValue < 0
+                                      ? 'text-red-700'
+                                      : 'text-gray-700'
+                                    }`}
+                                />
+                                <span className={`text-sm font-bold ${currentValue > 0
                                   ? 'text-green-700'
-                                  : sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key] < 0
+                                  : currentValue < 0
                                     ? 'text-red-700'
                                     : 'text-gray-700'
-                                  }`}
-                              />
-                              <span className={`text-sm font-bold ${sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key] > 0
-                                ? 'text-green-700'
-                                : sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key] < 0
-                                  ? 'text-red-700'
-                                  : 'text-gray-700'
-                                }`}>
-                                {param.unit}
-                              </span>
+                                  }`}>
+                                  {param.unit}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs text-red-600 font-medium w-12 text-left">
-                              {param.worst}{param.unit}
-                            </span>
-                            <div className="flex-1 relative">
-                              <input
-                                type="range"
-                                min={param.worst}
-                                max={param.best}
-                                step={0.1}
-                                value={sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues][key]}
-                                onChange={(e) => {
-                                  const newValue = parseFloat(e.target.value);
-                                  setSensitivityValues(prev => ({
-                                    ...prev,
-                                    [sensitivityScenario]: {
-                                      ...prev[sensitivityScenario as keyof typeof prev],
-                                      [key]: newValue
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-red-600 font-medium w-12 text-left">
+                                {param.worst}{param.unit}
+                              </span>
+                              <div className="flex-1 relative">
+                                <input
+
+                                  type="range"
+                                  min={Math.min(param.worst, param.best)}
+                                  max={Math.max(param.worst, param.best)}
+                                  step={0.1}
+                                  value={currentValue}
+                                  onChange={(e) => {
+                                    const newValue = parseFloat(e.target.value);
+                                    if (!isNaN(newValue)) {
+                                      updateParameter(key, newValue);
                                     }
-                                  }));
-                                }}
-                                className="w-full h-2 rounded-lg appearance-none cursor-pointer slider"
-                                style={{
-                                  background: `linear-gradient(to right, 
+                                  }}
+                                  className="w-full h-2 rounded-lg appearance-none cursor-pointer slider"
+                                  style={{
+                                    background: `linear-gradient(to right, 
                                     #fecaca 0%, 
                                     #f3f4f6 45%, 
                                     #f3f4f6 55%, 
                                     #bbf7d0 100%)`
-                                }}
-                              />
-                              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 bg-gray-500"></div>
+                                  }}
+                                />
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 bg-gray-500"></div>
+                              </div>
+                              <span className="text-xs text-green-600 font-medium w-12 text-right">
+                                +{param.best}{param.unit}
+                              </span>
                             </div>
-                            <span className="text-xs text-green-600 font-medium w-12 text-right">
-                              +{param.best}{param.unit}
-                            </span>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -2470,8 +3073,49 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="text-lg font-bold">
-                        ${((1000000) *
-                          (sensitivityScenario === 'best' ? 1.2 : sensitivityScenario === 'worst' ? 0.8 : 1) / 1000000).toFixed(1)}M
+                        {(() => {
+                          // Use the exact same base case value as overview tab
+                          let baseValue = 0;
+
+                          if (calculationResult?.dashboard_kpis?.base_case_enterprise_value) {
+                            baseValue = calculationResult.dashboard_kpis.base_case_enterprise_value;
+                          }
+
+                          // Debug: Log what base value is being used
+                          console.log('[DEBUG] Enterprise Value calculation:', {
+                            baseValue,
+                            sensitivityScenario,
+                            currentParams: sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {}
+                          });
+
+                          // Get current parameter values for dynamic calculation
+                          const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                          // Calculate dynamic multiplier based on actual parameter values
+                          const revenueImpact = (currentParams.revenueGrowth || 0) / 100 * 1.5;
+                          const marginImpact = (currentParams.operatingMargin || 0) / 100 * 2.0;
+                          const waccImpact = -(currentParams.wacc || 0) / 100 * 3.0;
+                          const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * 4.0;
+                          const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.8;
+                          const taxImpact = -(currentParams.taxRate || 0) / 100 * 1.2;
+
+                          // Combine all impacts to get total EV multiplier
+                          const dynamicMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                          const value = baseValue * Math.max(0.1, dynamicMultiplier);
+
+                          console.log('[DEBUG] Enterprise Value final calculation:', {
+                            revenueImpact,
+                            marginImpact,
+                            waccImpact,
+                            terminalImpact,
+                            retentionImpact,
+                            taxImpact,
+                            dynamicMultiplier,
+                            finalValue: value
+                          });
+
+                          return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -2484,8 +3128,49 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="text-lg font-bold">
-                        ${((800000) *
-                          (sensitivityScenario === 'best' ? 1.25 : sensitivityScenario === 'worst' ? 0.75 : 1) / 1000000).toFixed(1)}M
+                        {(() => {
+                          // Use the exact same base case value as overview tab
+                          let baseValue = 0;
+
+                          if (calculationResult?.dashboard_kpis?.base_case_equity_value) {
+                            baseValue = calculationResult.dashboard_kpis.base_case_equity_value;
+                          }
+
+                          // Debug: Log what base value is being used
+                          console.log('[DEBUG] Equity Value calculation:', {
+                            baseValue,
+                            sensitivityScenario,
+                            currentParams: sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {}
+                          });
+
+                          // Get current parameter values for dynamic calculation
+                          const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                          // Calculate dynamic multiplier based on actual parameter values
+                          const revenueImpact = (currentParams.revenueGrowth || 0) / 100 * 1.3;
+                          const marginImpact = (currentParams.operatingMargin || 0) / 100 * 1.8;
+                          const waccImpact = -(currentParams.wacc || 0) / 100 * 2.5;
+                          const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * 3.5;
+                          const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.6;
+                          const taxImpact = -(currentParams.taxRate || 0) / 100 * 1.0;
+
+                          // Combine all impacts to get total equity multiplier
+                          const dynamicMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                          const value = baseValue * Math.max(0.1, dynamicMultiplier);
+
+                          console.log('[DEBUG] Equity Value final calculation:', {
+                            revenueImpact,
+                            marginImpact,
+                            waccImpact,
+                            terminalImpact,
+                            retentionImpact,
+                            taxImpact,
+                            dynamicMultiplier,
+                            finalValue: value
+                          });
+
+                          return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -2498,8 +3183,25 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="text-lg font-bold">
-                        ${((500000) *
-                          (sensitivityScenario === 'best' ? 1.4 : sensitivityScenario === 'worst' ? 0.6 : 1) / 1000000).toFixed(1)}M
+                        {(() => {
+                          const baseValue = calculationResult?.dashboard_kpis?.base_case_npv || 0;
+                          // Get current parameter values for dynamic calculation
+                          const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                          // Calculate dynamic multiplier based on actual parameter values
+                          const revenueImpact = (currentParams.revenueGrowth || 0) / 100 * 1.5;
+                          const marginImpact = (currentParams.operatingMargin || 0) / 100 * 2.0;
+                          const waccImpact = -(currentParams.wacc || 0) / 100 * 3.0;
+                          const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * 4.0;
+                          const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.8;
+                          const taxImpact = -(currentParams.taxRate || 0) / 100 * 1.2;
+
+                          // Combine all impacts to get total NPV multiplier
+                          const dynamicMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                          const value = baseValue * Math.max(0.1, dynamicMultiplier);
+
+                          return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -2512,7 +3214,25 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="text-lg font-bold">
-                        {(15 * (sensitivityScenario === 'best' ? 1.3 : sensitivityScenario === 'worst' ? 0.7 : 1)).toFixed(1)}%
+                        {(() => {
+                          const baseValue = calculationResult?.dashboard_kpis?.base_case_irr || 0.15; // Default 15%
+                          // Get current parameter values for dynamic calculation
+                          const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                          // Calculate dynamic multiplier based on actual parameter values
+                          const revenueImpact = (currentParams.revenueGrowth || 0) / 100 * 1.2; // Revenue growth affects IRR
+                          const marginImpact = (currentParams.operatingMargin || 0) / 100 * 1.5; // Margin changes affect IRR
+                          const waccImpact = -(currentParams.wacc || 0) / 100 * 2.0; // Lower WACC increases IRR
+                          const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * 2.5; // Terminal growth affects IRR
+                          const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.5; // Client retention helps IRR
+                          const taxImpact = -(currentParams.taxRate || 0) / 100 * 0.8; // Lower taxes increase IRR
+
+                          // Combine all impacts to get total IRR multiplier
+                          const dynamicMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                          const value = baseValue * Math.max(0.1, dynamicMultiplier); // Ensure positive value
+
+                          return `${(value * 100).toFixed(1)}%`;
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -2525,7 +3245,25 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="text-lg font-bold">
-                        {(3.5 * (sensitivityScenario === 'best' ? 0.8 : sensitivityScenario === 'worst' ? 1.4 : 1)).toFixed(1)} yrs
+                        {(() => {
+                          const baseValue = calculationResult?.dashboard_kpis?.base_case_payback_period || 3.5; // Default 3.5 years
+                          // Get current parameter values for dynamic calculation
+                          const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                          // Calculate dynamic multiplier based on actual parameter values (lower is better for payback)
+                          const revenueImpact = -(currentParams.revenueGrowth || 0) / 100 * 0.8; // Higher revenue growth decreases payback
+                          const marginImpact = -(currentParams.operatingMargin || 0) / 100 * 1.0; // Higher margin decreases payback
+                          const waccImpact = (currentParams.wacc || 0) / 100 * 1.2; // Higher WACC increases payback
+                          const terminalImpact = -(currentParams.terminalGrowth || 0) / 100 * 1.5; // Higher terminal growth decreases payback
+                          const retentionImpact = -(currentParams.clientRetention || 0) / 100 * 0.4; // Higher retention decreases payback
+                          const taxImpact = (currentParams.taxRate || 0) / 100 * 0.6; // Higher taxes increase payback
+
+                          // Combine all impacts to get total payback multiplier (lower is better)
+                          const dynamicMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                          const value = baseValue * Math.max(0.5, dynamicMultiplier); // Ensure reasonable payback period
+
+                          return `${value.toFixed(1)} yrs`;
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -2538,7 +3276,25 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="text-lg font-bold">
-                        {(18 * (sensitivityScenario === 'best' ? 1.25 : sensitivityScenario === 'worst' ? 0.75 : 1)).toFixed(1)}%
+                        {(() => {
+                          const baseValue = 18; // Default 18%
+                          // Get current parameter values for dynamic calculation
+                          const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                          // Calculate dynamic multiplier based on actual parameter values
+                          const revenueImpact = (currentParams.revenueGrowth || 0) / 100 * 1.0; // Revenue growth affects ROIC
+                          const marginImpact = (currentParams.operatingMargin || 0) / 100 * 1.3; // Margin changes affect ROIC
+                          const waccImpact = -(currentParams.wacc || 0) / 100 * 1.5; // Lower WACC increases ROIC
+                          const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * 1.8; // Terminal growth affects ROIC
+                          const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.4; // Client retention helps ROIC
+                          const taxImpact = -(currentParams.taxRate || 0) / 100 * 0.7; // Lower taxes increase ROIC
+
+                          // Combine all impacts to get total ROIC multiplier
+                          const dynamicMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                          const value = baseValue * Math.max(0.1, dynamicMultiplier); // Ensure positive value
+
+                          return `${value.toFixed(1)}%`;
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -2554,18 +3310,90 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                     <CardContent>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={[
-                            { variable: 'Base EV', value: 100, cumulative: 100, type: 'base' },
-                            { variable: 'Revenue Growth', value: sensitivityScenario === 'best' ? 15 : sensitivityScenario === 'worst' ? -20 : 0, cumulative: sensitivityScenario === 'best' ? 115 : sensitivityScenario === 'worst' ? 80 : 100, type: 'change' },
-                            { variable: 'EBITDA Margin', value: sensitivityScenario === 'best' ? 8 : sensitivityScenario === 'worst' ? -12 : 0, cumulative: sensitivityScenario === 'best' ? 123 : sensitivityScenario === 'worst' ? 68 : 100, type: 'change' },
-                            { variable: 'WACC', value: sensitivityScenario === 'best' ? 5 : sensitivityScenario === 'worst' ? -8 : 0, cumulative: sensitivityScenario === 'best' ? 128 : sensitivityScenario === 'worst' ? 60 : 100, type: 'change' },
-                            { variable: 'Terminal Growth', value: sensitivityScenario === 'best' ? 3 : sensitivityScenario === 'worst' ? -5 : 0, cumulative: sensitivityScenario === 'best' ? 131 : sensitivityScenario === 'worst' ? 55 : 100, type: 'change' },
-                            { variable: 'Final EV', value: 0, cumulative: sensitivityScenario === 'best' ? 131 : sensitivityScenario === 'worst' ? 55 : 100, type: 'final' }
-                          ]}>
+                          <ComposedChart data={(() => {
+                            // Get current parameter values for the selected scenario
+                            const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+
+
+                            // Calculate cumulative impact on Enterprise Value
+                            let cumulative = 100; // Start at 100% base value
+                            const waterfallData = [];
+
+                            // Base EV
+                            waterfallData.push({ variable: 'Base EV', value: 0, cumulative: 100, type: 'base' });
+
+                            // Revenue Growth impact (affects EV significantly)
+                            const revenueImpact = (currentParams.revenueGrowth || 0) * 1.5; // 1.5x multiplier for EV impact
+                            cumulative += revenueImpact;
+                            waterfallData.push({
+                              variable: 'Revenue Growth',
+                              value: revenueImpact,
+                              cumulative: cumulative,
+                              type: 'change'
+                            });
+
+                            // Operating Margin / EBITDA Margin impact  
+                            const marginImpact = (currentParams.operatingMargin || 0) * 2.0; // 2x multiplier for margin impact
+                            cumulative += marginImpact;
+                            waterfallData.push({
+                              variable: 'Operating Margin',
+                              value: marginImpact,
+                              cumulative: cumulative,
+                              type: 'change'
+                            });
+
+                            // WACC impact (negative WACC change increases EV)
+                            const waccImpact = -(currentParams.wacc || 0) * 3.0; // 3x multiplier, negative because lower WACC = higher EV
+                            cumulative += waccImpact;
+                            waterfallData.push({
+                              variable: 'WACC',
+                              value: waccImpact,
+                              cumulative: cumulative,
+                              type: 'change'
+                            });
+
+                            // Terminal Growth impact
+                            const terminalImpact = (currentParams.terminalGrowth || 0) * 4.0; // 4x multiplier for terminal value impact
+                            cumulative += terminalImpact;
+                            waterfallData.push({
+                              variable: 'Terminal Growth',
+                              value: terminalImpact,
+                              cumulative: cumulative,
+                              type: 'change'
+                            });
+
+                            // Client Retention impact (if available)
+                            if (currentParams.clientRetention !== undefined) {
+                              const retentionImpact = (currentParams.clientRetention || 0) * 1.2;
+                              cumulative += retentionImpact;
+                              waterfallData.push({
+                                variable: 'Client Retention',
+                                value: retentionImpact,
+                                cumulative: cumulative,
+                                type: 'change'
+                              });
+                            }
+
+                            // Final EV
+                            waterfallData.push({
+                              variable: 'Final EV',
+                              value: 0,
+                              cumulative: cumulative,
+                              type: 'final'
+                            });
+
+                            return waterfallData;
+                          })()}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="variable" angle={-45} textAnchor="end" height={80} fontSize={10} />
-                            <YAxis />
-                            <Tooltip formatter={(value, name) => [`${value}%`, name === 'value' ? 'Impact' : 'Cumulative EV']} />
+                            <YAxis tickFormatter={(value) => `${value.toFixed(0)}%`} />
+                            <Tooltip
+                              formatter={(value, name) => [
+                                `${Number(value).toFixed(1)}%`,
+                                name === 'value' ? 'Impact' : 'Cumulative EV'
+                              ]}
+                            />
                             <Bar dataKey="value" fill={PRIMARY_COLOR} />
                             <Line type="monotone" dataKey="cumulative" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
                           </ComposedChart>
@@ -2577,23 +3405,52 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                   <Card>
                     <CardHeader>
                       <CardTitle>Revenue & Profitability Trends</CardTitle>
-                      <p className="text-sm text-muted-foreground">Historical vs. Projected performance</p>
+                      <p className="text-sm text-muted-foreground">Historical vs. Projected performance with sensitivity analysis</p>
+
                     </CardHeader>
                     <CardContent>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={[
-                            { year: '2022', revenue: 80, ebitda: 16, netIncome: 8, section: 'historical' },
-                            { year: '2023', revenue: 90, ebitda: 20, netIncome: 12, section: 'historical' },
-                            { year: '2024', revenue: 100, ebitda: 25, netIncome: 15, section: 'current' },
-                            { year: '2025', revenue: 110 * (sensitivityScenario === 'best' ? 1.1 : sensitivityScenario === 'worst' ? 0.9 : 1), ebitda: 30 * (sensitivityScenario === 'best' ? 1.2 : sensitivityScenario === 'worst' ? 0.8 : 1), netIncome: 20 * (sensitivityScenario === 'best' ? 1.3 : sensitivityScenario === 'worst' ? 0.7 : 1), section: 'forecast' },
-                            { year: '2026', revenue: 120 * (sensitivityScenario === 'best' ? 1.15 : sensitivityScenario === 'worst' ? 0.85 : 1), ebitda: 36 * (sensitivityScenario === 'best' ? 1.25 : sensitivityScenario === 'worst' ? 0.75 : 1), netIncome: 25 * (sensitivityScenario === 'best' ? 1.4 : sensitivityScenario === 'worst' ? 0.6 : 1), section: 'forecast' },
-                            { year: '2027', revenue: 130 * (sensitivityScenario === 'best' ? 1.2 : sensitivityScenario === 'worst' ? 0.8 : 1), ebitda: 42 * (sensitivityScenario === 'best' ? 1.3 : sensitivityScenario === 'worst' ? 0.7 : 1), netIncome: 30 * (sensitivityScenario === 'best' ? 1.5 : sensitivityScenario === 'worst' ? 0.5 : 1), section: 'forecast' }
-                          ]}>
+                          <ComposedChart data={getRevenueProfitabilityChartData()}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="year" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => [`$${value}M`, '']} />
+                            <YAxis tickFormatter={(value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                            <Tooltip
+                              formatter={(value: number, name: string, props: any) => {
+                                const data = props.payload;
+
+                                if (data.section === 'forecast') {
+                                  // Map the name to the correct multiplier key
+                                  let multiplierKey = '';
+                                  let displayName = '';
+
+                                  if (name === 'Revenue') {
+                                    multiplierKey = 'revenueMultiplier';
+                                    displayName = 'Revenue';
+                                  } else if (name === 'EBITDA') {
+                                    multiplierKey = 'ebitdaMultiplier';
+                                    displayName = 'EBITDA';
+                                  } else if (name === 'Net Income') {
+                                    multiplierKey = 'netIncomeMultiplier';
+                                    displayName = 'Net Income';
+                                  }
+
+                                  if (multiplierKey && data[multiplierKey]) {
+                                    return [
+                                      `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                                      `${displayName} (${data[multiplierKey].toFixed(2)}x)`
+                                    ];
+                                  }
+                                }
+
+                                // Fallback for historical data or if no multiplier found
+                                return [
+                                  `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                                  name
+                                ];
+                              }}
+                              labelFormatter={(year) => `Year: ${year}`}
+                            />
                             <Legend />
                             <Bar dataKey="revenue" fill={PRIMARY_COLOR} name="Revenue" />
                             <Line type="monotone" dataKey="ebitda" stroke="#f59e0b" strokeWidth={2} name="EBITDA" />
@@ -2610,24 +3467,65 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                   <Card>
                     <CardHeader>
                       <CardTitle>Monte Carlo Simulation</CardTitle>
-                      <p className="text-sm text-muted-foreground">NPV probability distribution</p>
+                      <p className="text-sm text-muted-foreground">NPV probability distribution with sensitivity analysis</p>
+
                     </CardHeader>
                     <CardContent>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={[
-                            { npv: 200, probability: 5, cumulative: 5 },
-                            { npv: 300, probability: 15, cumulative: 20 },
-                            { npv: 400, probability: 25, cumulative: 45 },
-                            { npv: 500, probability: 30, cumulative: 75 },
-                            { npv: 600, probability: 20, cumulative: 95 },
-                            { npv: 700, probability: 5, cumulative: 100 }
-                          ]}>
+                          <ComposedChart data={(() => {
+                            // Get base NPV from backend calculations (keep original values)
+                            const baseNPV = calculationResult?.dashboard_kpis?.base_case_npv || 500000;
+
+
+
+                            // Calculate scenario multiplier based on actual parameter values
+                            const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+                            // Calculate cumulative impact on NPV from all parameters
+                            const revenueImpact = (currentParams.revenueGrowth || 0) / 100 * 1.5; // Revenue growth significantly affects NPV
+                            const marginImpact = (currentParams.operatingMargin || 0) / 100 * 2.0; // Margin changes have high NPV impact
+                            const waccImpact = -(currentParams.wacc || 0) / 100 * 3.0; // Lower WACC increases NPV significantly
+                            const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * 4.0; // Terminal growth has huge NPV impact
+                            const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.8; // Client retention helps NPV
+                            const taxImpact = -(currentParams.taxRate || 0) / 100 * 1.2; // Lower taxes increase NPV
+
+                            // Combine all impacts to get total NPV multiplier
+                            const scenarioMultiplier = 1 + revenueImpact + marginImpact + waccImpact + terminalImpact + retentionImpact + taxImpact;
+                            // Scenario multiplier calculated
+
+                            // Create adjusted base NPV for the scenario
+                            const adjustedBaseNPV = baseNPV * Math.max(0.1, scenarioMultiplier); // Ensure positive NPV
+                            // Base NPV adjusted
+
+                            // Create probability distribution around the adjusted NPV
+                            const distribution = [
+                              { npv: Math.max(10000, adjustedBaseNPV * 0.4), probability: 5, cumulative: 5 },
+                              { npv: Math.max(20000, adjustedBaseNPV * 0.6), probability: 15, cumulative: 20 },
+                              { npv: Math.max(30000, adjustedBaseNPV * 0.8), probability: 25, cumulative: 45 },
+                              { npv: adjustedBaseNPV, probability: 30, cumulative: 75 },
+                              { npv: adjustedBaseNPV * 1.2, probability: 20, cumulative: 95 },
+                              { npv: adjustedBaseNPV * 1.4, probability: 5, cumulative: 100 }
+                            ];
+
+                            // Distribution created
+                            return distribution;
+                          })()}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="npv" label={{ value: 'NPV ($M)', position: 'insideBottom', offset: -5 }} />
+                            <XAxis
+                              dataKey="npv"
+                              label={{ value: 'NPV ($)', position: 'insideBottom', offset: -5 }}
+                              tickFormatter={(value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                            />
                             <YAxis yAxisId="left" label={{ value: 'Probability (%)', angle: -90, position: 'insideLeft' }} />
                             <YAxis yAxisId="right" orientation="right" label={{ value: 'Cumulative (%)', angle: 90, position: 'insideRight' }} />
-                            <Tooltip />
+                            <Tooltip
+                              formatter={(value, name) => [
+                                name === 'probability' ? `${value}%` : `${value}%`,
+                                name === 'probability' ? 'Probability' : 'Cumulative'
+                              ]}
+                              labelFormatter={(npv) => `NPV: $${Number(npv).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            />
                             <Bar yAxisId="left" dataKey="probability" fill={INFO_COLOR} name="Probability" />
                             <Line yAxisId="right" type="monotone" dataKey="cumulative" stroke="#dc2626" strokeWidth={2} name="Cumulative" />
                           </ComposedChart>
@@ -2639,21 +3537,113 @@ const HistoricalDashboard: React.FC<HistoricalDashboardProps> = ({ calculationRe
                   <Card>
                     <CardHeader>
                       <CardTitle>Cash Flow Analysis</CardTitle>
-                      <p className="text-sm text-muted-foreground">Operating, Investing & Financing flows</p>
+                      <p className="text-sm text-muted-foreground">Operating, Investing & Financing flows with sensitivity analysis</p>
+
                     </CardHeader>
                     <CardContent>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart data={[
-                            { year: '2024', operating: 25, investing: -5, financing: -8, freeCashFlow: 20 },
-                            { year: '2025', operating: 30 * (sensitivityScenario === 'best' ? 1.2 : sensitivityScenario === 'worst' ? 0.8 : 1), investing: -6, financing: -10, freeCashFlow: 24 * (sensitivityScenario === 'best' ? 1.3 : sensitivityScenario === 'worst' ? 0.7 : 1) },
-                            { year: '2026', operating: 36 * (sensitivityScenario === 'best' ? 1.25 : sensitivityScenario === 'worst' ? 0.75 : 1), investing: -7, financing: -12, freeCashFlow: 29 * (sensitivityScenario === 'best' ? 1.4 : sensitivityScenario === 'worst' ? 0.6 : 1) },
-                            { year: '2027', operating: 42 * (sensitivityScenario === 'best' ? 1.3 : sensitivityScenario === 'worst' ? 0.7 : 1), investing: -8, financing: -15, freeCashFlow: 34 * (sensitivityScenario === 'best' ? 1.5 : sensitivityScenario === 'worst' ? 0.5 : 1) }
-                          ]}>
+                          <ComposedChart data={(() => {
+                            if (!calculationResult) return [];
+
+                            // Extract real FCF data from backend calculations
+                            const dashboardKpis = calculationResult.dashboard_kpis;
+                            const fcfValues = dashboardKpis?.chart_data?.free_cash_flow_all_years ||
+                              dashboardKpis?.free_cash_flow_all_years || [];
+                            const years = calculationResult.income_statement?.years || [];
+
+                            // Get current parameter values for the selected scenario
+                            const currentParams = sensitivityValues[sensitivityScenario as keyof typeof sensitivityValues] || {};
+
+
+
+                            // Create cash flow data with real base values and enhanced sensitivity analysis
+                            return years.map((year: string, index: number) => {
+                              const currentYear = new Date().getFullYear();
+                              const yearNum = parseInt(year);
+
+                              let section = 'historical';
+                              if (yearNum === currentYear) {
+                                section = 'current';
+                              } else if (yearNum > currentYear) {
+                                section = 'forecast';
+                              }
+
+                              // Get base FCF value
+                              const baseFCF = fcfValues[index] || 0;
+
+                              // Estimate operating CF (typically higher than FCF)
+                              const baseOperatingCF = baseFCF * 1.3;
+
+                              // Apply sensitivity parameter multipliers only to forecast years
+                              let operatingMultiplier = 1;
+                              let fcfMultiplier = 1;
+
+                              if (section === 'forecast') {
+                                // Calculate years into the future for compounding effects
+                                const yearsIntoFuture = yearNum - currentYear;
+
+                                // Operating Cash Flow influenced by revenue growth and margin with scale efficiency
+                                const revenueGrowthRate = (currentParams.revenueGrowth || 0) / 100;
+                                const marginImpact = (currentParams.operatingMargin || 0) / 100;
+                                const scaleEfficiency = Math.min(yearsIntoFuture * 0.05, 0.15); // Efficiency improves over time
+                                operatingMultiplier = 1 + revenueGrowthRate + (marginImpact * 1.5) + scaleEfficiency;
+
+                                // Enhanced Free Cash Flow calculation with multiple parameter impacts
+                                const retentionImpact = (currentParams.clientRetention || 0) / 100 * 0.4;
+                                const taxImpact = -(currentParams.taxRate || 0) / 100; // Lower tax = higher FCF
+                                const workingCapitalImpact = -(currentParams.workingCapitalDays || 0) / 365 * 0.1; // Lower WC days = higher FCF
+                                const waccImpact = -(currentParams.wacc || 0) / 100 * 0.3; // Lower WACC improves financing efficiency
+
+                                // FCF benefits from operational improvements and efficiency gains
+                                fcfMultiplier = 1 + revenueGrowthRate + marginImpact + retentionImpact + taxImpact + workingCapitalImpact + waccImpact;
+
+                                // Terminal growth impact (becomes more significant in later forecast years)
+                                if (yearsIntoFuture >= 3) {
+                                  const terminalImpact = (currentParams.terminalGrowth || 0) / 100 * (yearsIntoFuture - 2) * 0.3;
+                                  operatingMultiplier += terminalImpact * 0.8;
+                                  fcfMultiplier += terminalImpact * 0.6;
+                                }
+
+                                // Ensure positive values with reasonable bounds
+                                operatingMultiplier = Math.max(0.1, Math.min(operatingMultiplier, 4.0)); // Max 4x growth
+                                fcfMultiplier = Math.max(0.1, Math.min(fcfMultiplier, 3.5)); // Max 3.5x growth
+
+                                // Multipliers calculated for forecast years
+                              }
+
+                              return {
+                                year,
+                                section,
+                                operating: Math.max(0, baseOperatingCF * operatingMultiplier),
+                                investing: -Math.abs(baseFCF * 0.2), // Negative investing (CapEx)
+                                financing: -Math.abs(baseFCF * 0.15), // Negative financing (debt payments)
+                                freeCashFlow: Math.max(0, baseFCF * fcfMultiplier),
+                                // Add debug info for tooltip
+                                baseFCF: baseFCF,
+                                baseOperatingCF: baseOperatingCF,
+                                operatingMultiplier: operatingMultiplier,
+                                fcfMultiplier: fcfMultiplier
+                              };
+                            });
+                          })()}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="year" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => [`$${value}M`, '']} />
+                            <YAxis tickFormatter={(value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                            <Tooltip
+                              formatter={(value: number, name: string, props: any) => {
+                                const data = props.payload;
+                                if (data.section === 'forecast') {
+                                  if (name === 'operating') {
+                                    return [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, `Operating CF (${data.operatingMultiplier.toFixed(2)}x)`];
+                                  } else if (name === 'freeCashFlow') {
+                                    return [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, `Free Cash Flow (${data.fcfMultiplier.toFixed(2)}x)`];
+                                  }
+                                }
+                                return [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, ''];
+                              }}
+                              labelFormatter={(year) => `Year: ${year}`}
+                            />
                             <Legend />
                             <Bar dataKey="operating" fill={SUCCESS_COLOR} name="Operating CF" />
                             <Bar dataKey="investing" fill={WARNING_COLOR} name="Investing CF" />

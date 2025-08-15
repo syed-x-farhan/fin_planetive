@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 const models = [
   {
     id: '3-statement',
-    name: '3-Statement Model',
-    description: 'Integrated Income Statement, Balance Sheet, and Cash Flow Statement projections',
+    name: '3-Statement and DCF',
+    description: 'Integrated Income Statement, Balance Sheet, Cash Flow Statement, and DCF valuation',
     icon: BarChart3,
     complexity: 'Intermediate',
     timeEstimate: '15-30 min',
@@ -24,15 +24,6 @@ const models = [
     complexity: 'Beginner',
     timeEstimate: '10-20 min',
     color: 'from-orange-500 to-red-500'
-  },
-  {
-    id: 'historical',
-    name: 'Historical Data Model',
-    description: 'Financial modeling for established businesses with historical data analysis',
-    icon: Building2,
-    complexity: 'Advanced',
-    timeEstimate: '20-40 min',
-    color: 'from-purple-500 to-pink-500'
   }
 ];
 
@@ -59,7 +50,7 @@ const Home = () => {
         </div>
 
         {/* Model Selection Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {models.map((model) => {
             const IconComponent = model.icon;
             return (

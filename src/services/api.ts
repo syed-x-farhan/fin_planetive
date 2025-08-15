@@ -7,8 +7,8 @@
 
 import { Variable, VariableSection } from '@/config/models/threeStatementConfig';
 
-// API Base URL - Uses environment variable in production, falls back to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+// API Base URL - Update this to match your backend URL
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 /**
  * API Response Types
@@ -94,6 +94,134 @@ export interface CalculationResult {
     terminal_value?: number;
     revenue_growth?: number;
     ebitda_margin?: number;
+    // Enhanced base ratios (applicable to all company types)
+    gross_margin?: number;
+    operating_margin?: number;
+    roa?: number;
+    quick_ratio?: number;
+    debt_ratio?: number;
+    equity_ratio?: number;
+    working_capital?: number;
+    expense_ratio?: number;
+    // Enhanced service-specific ratios
+    clv_cac_ratio?: number;
+    client_concentration_risk?: number;
+    
+    // Base case sensitivity analysis KPIs
+    base_case_enterprise_value?: number;
+    base_case_equity_value?: number;
+    base_case_npv?: number;
+    base_case_irr?: number;
+    base_case_revenue_multiple?: number;
+    base_case_ebitda_multiple?: number;
+    base_case_payback_period?: number;
+    base_case_terminal_value?: number;
+    base_case_assumptions?: {
+      discount_rate?: number;
+      terminal_growth_rate?: number;
+      revenue_growth_rate?: number;
+      expense_growth_rate?: number;
+      client_retention_rate?: number;
+      utilization_rate?: number;
+      tax_rate?: number;
+    };
+    base_case_projections?: {
+      projected_fcf?: number[];
+      projection_years?: number;
+    };
+    // Free Cash Flow data
+    free_cash_flow_all_years?: number[];
+    fcf_base_year?: number;
+    // Revenue vs Expenses donut chart data
+    donut_chart_data?: {
+      chart_data?: Array<{
+        name: string;
+        value: number;
+        percentage: number;
+        color: string;
+        format: string;
+        is_loss?: boolean;
+        is_secondary?: boolean;
+      }>;
+      summary?: {
+        total_revenue: number;
+        total_expenses: number;
+        net_income: number;
+        ebitda: number;
+        profit_margin: number;
+        expense_ratio: number;
+        is_profitable: boolean;
+      };
+      base_year_metrics?: {
+        revenue_per_dollar: number;
+        expense_per_dollar: number;
+        profit_per_dollar: number;
+      };
+    };
+    // Tornado chart data for sensitivity analysis
+    tornado_chart_data?: Array<{
+      variable: string;
+      low: number;
+      high: number;
+      base: number;
+    }>;
+    // Sensitivity heatmap data
+    sensitivity_heatmap_data?: Array<{
+      wacc: number;
+      values: Array<{
+        growth: number;
+        dcf: number;
+      }>;
+    }>;
+    // Vertical analysis data
+    vertical_analysis?: {
+      income_statement: Array<{
+        name: string;
+        values: number[];
+        percentages: number[];
+        isHeader: boolean;
+        isSubItem: boolean;
+        isTotal: boolean;
+      }>;
+      balance_sheet: Array<{
+        name: string;
+        values: number[];
+        percentages: number[];
+        isHeader: boolean;
+        isSubItem: boolean;
+        isTotal: boolean;
+      }>;
+      year_metadata?: Array<{
+        year: string;
+        type: 'historical' | 'current' | 'forecasted';
+      }>;
+      years?: string[];
+    };
+    // Horizontal analysis data
+    horizontal_analysis?: {
+      income_statement: Array<{
+        name: string;
+        values: number[];
+        growth: (number | null)[];
+        isHeader: boolean;
+        isSubItem: boolean;
+        isTotal: boolean;
+      }>;
+      year_metadata?: Array<{
+        year: string;
+        type: 'historical' | 'current' | 'forecasted';
+      }>;
+      years?: string[];
+    };
+    // Chart data for dashboard
+    chart_data?: {
+      years?: string[];
+      revenue_all_years?: number[];
+      expenses_all_years?: number[];
+      net_income_all_years?: number[];
+      ebitda_all_years?: number[];
+      free_cash_flow_all_years?: number[];
+    };
   };
 }
 
@@ -116,7 +244,7 @@ async function apiRequest<T>(
                },
                ...options,
                // Add timeout to prevent hanging
-               signal: AbortSignal.timeout(30000), // 30 second timeout
+               signal: AbortSignal.timeout(45000), // 45 second timeout (optimized backend should be much faster)
              });
 
     console.log('Response status:', response.status);

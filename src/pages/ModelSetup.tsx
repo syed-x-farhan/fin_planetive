@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Trash2, Calculator, TrendingUp, DollarSign, BarChart3, Activity, ChevronDown, Play, Building2, Laptop, Home, Factory, FileText, TrendingDown, Plus, Edit3, Upload, Loader2, FileDown, CreditCard, Banknote } from 'lucide-react';
+import { PlusCircle, Trash2, Calculator, TrendingUp, DollarSign, BarChart3, Activity, ChevronDown, Play, Building2, Laptop, Home, Factory, FileText, TrendingDown, Plus, Edit3, Upload, Loader2, FileDown, CreditCard, Banknote, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCalculationResult } from '@/contexts/CalculationResultContext';
@@ -148,14 +148,7 @@ export default function ModelSetup() {
   // Add state to store the full form data for layman input
   const [laymanFormData, setLaymanFormData] = useState<any>(null);
 
-  // Handle model routing
-  useEffect(() => {
-    if (modelId && modelId === 'historical') {
-      // Redirect to historical model page
-      navigate('/historical');
-      return;
-    }
-  }, [modelId, navigate]);
+
 
   // Restore form data when calculationResult is available
   useEffect(() => {
@@ -197,6 +190,13 @@ export default function ModelSetup() {
       localStorage.setItem(`model_${selectedModel}_variables`, JSON.stringify(dataToSave));
     }
   }, [variableSections, selectedModel]);
+
+  // Function to go back to questionnaire
+  const handleBackToQuestionnaire = () => {
+    setShowCompanyTypeSelector(false);
+    setShowOnboarding(true);
+    setSelectedCompanyType(null);
+  };
 
   // Wrapper function to save company type to localStorage
   const handleCompanyTypeSelect = (companyType: string | null) => {
@@ -849,77 +849,21 @@ export default function ModelSetup() {
           <AppSidebar selectedModel={selectedModel} onModelSelect={handleModelSelect} />
           
           <SidebarInset className="flex-1">
-            {/* Model Information and Actions */}
-            <div className="px-6 pt-6 pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-semibold text-foreground">{getModelName()}</h1>
-                  <p className="text-sm text-muted-foreground">{getModelDescription()}</p>
-                </div>
-                {/* Export button */}
-                {selectedModel && showResults && (
-                  <div className="flex items-center gap-3">
-                    <Button 
-                      variant="outline"
-                      onClick={handleExportPDF}
-                      disabled={isExportingPDF}
-                      className="flex items-center gap-2"
-                    >
-                      {isExportingPDF ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileDown className="h-4 w-4" />
-                      )}
-                      {isExportingPDF ? 'Exporting...' : 'Export to PDF'}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
 
           {/* Main Content Area */}
           {showCompanyTypeSelector ? (
-            <CompanyTypeSelector
-              selectedType={selectedCompanyType}
-              onSelect={(type) => { handleCompanyTypeSelect(type); setShowCompanyTypeSelector(false); }}
-            />
+            <div className="flex flex-col items-center justify-center min-h-[70vh] p-8">
+              <CompanyTypeSelector
+                selectedType={selectedCompanyType}
+                onSelect={(type) => { handleCompanyTypeSelect(type); setShowCompanyTypeSelector(false); }}
+                onBack={handleBackToQuestionnaire}
+              />
+            </div>
           ) : !showResults ? (
             // Variable Configuration Screen
             <div className="flex-1 p-8">
               <div className="max-w-7xl mx-auto">
                 <div className="space-y-8">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-foreground">Model Variables</h2>
-                    <Dialog open={showImportWizard} onOpenChange={setShowImportWizard}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="gap-2">
-                          <Upload className="h-4 w-4" />
-                          Import from Excel
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-6xl h-[90vh] overflow-auto">
-                        <DialogHeader>
-                          <DialogTitle>Import Financial Data</DialogTitle>
-                          <DialogDescription>
-                            Upload and map your Excel data to populate the model variables
-                          </DialogDescription>
-                        </DialogHeader>
-                        <ImportWizard
-                          onCancel={handleImportCancel}
-                          modelId="3-statement"
-                          onImportComplete={handleImportComplete}
-                          onCalculationComplete={(result) => {
-                            setCalculationResult(result);
-                            toast({
-                              title: "🎉 Calculation Complete",
-                              description: "Your financial model has been successfully calculated and is ready for analysis."
-                            });
-                            navigate(`/model/3-statement/statements`);
-                          }}
-                        />
-                      </DialogContent>
-                    </Dialog>
-                  </div>
 
                   {/* Layman-friendly input for 3-statement model */}
                   {selectedModel === '3-statement' ? (
@@ -927,6 +871,7 @@ export default function ModelSetup() {
                       <CompanyTypeSelector
                         selectedType={selectedCompanyType}
                         onSelect={handleCompanyTypeSelect}
+                        onBack={handleBackToQuestionnaire}
                       />
                     ) : !showResults ? (
                       laymanFormData ? (

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, DollarSign, Users, TrendingUp, Building, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ServiceBusinessAddon from './addons/ServiceBusinessAddon';
+import RetailBusinessAddon from './addons/RetailBusinessAddon';
 
 interface HistoricalExpense {
   category: string;
@@ -148,6 +149,20 @@ interface BaseHistoricalDataForm {
     expansionRevenuePercent: string;
     seasonalityFactor: string;
   };
+  retailBusinessModel?: {
+    storeCount: number;
+    averageStoreSize: number;
+    inventoryTurnover: number;
+    grossMargin: number;
+    storeUtilization: number;
+    customerTraffic: number;
+    averageTransactionValue: number;
+    seasonalVariation: number;
+    onlineSalesPercentage: number;
+    supplyChainEfficiency: number;
+    storeLocationQuality: number;
+    competitiveAdvantage: string;
+  };
   expenses: HistoricalExpense[];
   equipment: HistoricalEquipment[];
   loans: HistoricalLoan[];
@@ -158,11 +173,18 @@ interface BaseHistoricalDataForm {
   // Assumptions
   taxRate: string;
   selfFunding: string;
+  payrollExpenses: string;
+  annualSalaryIncrease: string;
+  annualManagementSalaryIncrease: string;
+  dividendPayoutRate: string;
+  capitalCosts: string;
+  operationalCosts: string;
 
   // Growth Assumptions
   revenueGrowthRate: string;
   expenseGrowthRate: string;
   customerGrowthRate: string;
+  totalCustomers: string;
 
   // Credit Sales & Accounts Payable
   creditSales: {
@@ -201,6 +223,8 @@ interface BaseHistoricalDataForm {
   taxRateWacc: string;
   equityPct: string;
   debtPct: string;
+  paidUpCapital: string;
+  investmentEquity: string;
   globalInterestRates: {
     shortTerm: string;
     longTerm: string;
@@ -432,6 +456,22 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
     seasonalityFactor: '20'
   });
 
+  // Retail business model state
+  const [retailBusinessModel, setRetailBusinessModel] = useState({
+    storeCount: 1,
+    averageStoreSize: 2000,
+    inventoryTurnover: 4.5,
+    grossMargin: 35.0,
+    storeUtilization: 75.0,
+    customerTraffic: 150,
+    averageTransactionValue: 45.50,
+    seasonalVariation: 25.0,
+    onlineSalesPercentage: 15.0,
+    supplyChainEfficiency: 7.5,
+    storeLocationQuality: 8.0,
+    competitiveAdvantage: ''
+  });
+
   // Simple fields
   const [yearsInBusiness, setYearsInBusiness] = useState('3');
   const [forecastYears, setForecastYears] = useState('5');
@@ -440,6 +480,7 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
   const [revenueGrowthRate, setRevenueGrowthRate] = useState('10');
   const [expenseGrowthRate, setExpenseGrowthRate] = useState('5');
   const [customerGrowthRate, setCustomerGrowthRate] = useState('15');
+  const [totalCustomers, setTotalCustomers] = useState('100');
 
   // Calculation method states
   const [revenueCalculationMethod, setRevenueCalculationMethod] = useState<'simple' | 'weighted' | 'cagr' | 'custom'>('custom');
@@ -450,6 +491,12 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
   const [creditSalesPercent, setCreditSalesPercent] = useState('');
   const [creditCollectionDays, setCreditCollectionDays] = useState('');
   const [apDays, setApDays] = useState('');
+  const [payrollExpenses, setPayrollExpenses] = useState('');
+  const [annualSalaryIncrease, setAnnualSalaryIncrease] = useState('3');
+  const [annualManagementSalaryIncrease, setAnnualManagementSalaryIncrease] = useState('5');
+  const [dividendPayoutRate, setDividendPayoutRate] = useState('30');
+  const [capitalCosts, setCapitalCosts] = useState('');
+  const [operationalCosts, setOperationalCosts] = useState('');
 
   const [ownerDrawings, setOwnerDrawings] = useState('');
   const [ownerDrawingsFrequency, setOwnerDrawingsFrequency] = useState<'monthly' | 'annual'>('monthly');
@@ -470,6 +517,8 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
   const [taxRateWacc, setTaxRateWacc] = useState('25');
   const [equityPct, setEquityPct] = useState('70');
   const [debtPct, setDebtPct] = useState('30');
+  const [paidUpCapital, setPaidUpCapital] = useState('');
+  const [investmentEquity, setInvestmentEquity] = useState('');
   const [globalInterestRates, setGlobalInterestRates] = useState({
     shortTerm: '5',
     longTerm: '6',
@@ -1015,6 +1064,7 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
       historicalShareholders,
       services: companyType === 'service' ? services : [],
       serviceBusinessModel: companyType === 'service' ? serviceBusinessModel : undefined,
+      retailBusinessModel: companyType === 'retail' ? retailBusinessModel : undefined,
       expenses: hasExpenses ? expenses : [],
       equipment: hasEquipment ? equipment : [],
       loans: hasLoans ? loans : [],
@@ -1023,9 +1073,16 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
       shareholders,
       taxRate,
       selfFunding,
+      payrollExpenses,
+      annualSalaryIncrease,
+      annualManagementSalaryIncrease,
+      dividendPayoutRate,
+      capitalCosts,
+      operationalCosts,
       revenueGrowthRate,
       expenseGrowthRate,
       customerGrowthRate,
+      totalCustomers,
       creditSales: { percent: creditSalesPercent, collectionDays: creditCollectionDays },
       accountsPayable: { days: apDays },
       ownerDrawings: { amount: ownerDrawings, frequency: ownerDrawingsFrequency },
@@ -1046,6 +1103,8 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
       taxRateWacc,
       equityPct,
       debtPct,
+      paidUpCapital,
+      investmentEquity,
       globalInterestRates
     };
     onSubmit(formData);
@@ -1067,7 +1126,7 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
       <Card className="shadow-lg border-teal-200">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Basic Information</CardTitle>
-          <CardDescription>Tell us about your business</CardDescription>
+          <CardDescription>Core business setup and configuration</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1092,13 +1151,16 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
             </div>
 
             <div>
-              <Label htmlFor="taxRate">Tax Rate (%)</Label>
-              <Input
-                type="number"
-                value={taxRate}
-                onChange={(e) => setTaxRate(e.target.value)}
-                placeholder="25"
-              />
+              <Label htmlFor="fiscalYearStart">Fiscal Year Start</Label>
+              <Select value={fiscalYearStart} onValueChange={setFiscalYearStart}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="January">January</SelectItem>
+                  <SelectItem value="June">June</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -1113,19 +1175,154 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
             </div>
 
             <div>
-              <Label htmlFor="fiscalYearStart">Fiscal Year Start</Label>
-              <Select value={fiscalYearStart} onValueChange={setFiscalYearStart}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="January">January</SelectItem>
-                  <SelectItem value="June">June</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="totalCustomers">Total Customers</Label>
+              <Input
+                type="number"
+                value={totalCustomers}
+                onChange={(e) => setTotalCustomers(e.target.value)}
+                placeholder="100"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Current total customer base</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Financial Assumptions Card */}
+      <Card className="shadow-lg border-teal-200">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Financial Assumptions</CardTitle>
+          <CardDescription>Key financial parameters and growth rates</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <Label htmlFor="taxRate">Tax Rate (%)</Label>
+              <Input
+                type="number"
+                value={taxRate}
+                onChange={(e) => setTaxRate(e.target.value)}
+                placeholder="25"
+              />
             </div>
 
+            <div>
+              <Label htmlFor="dividendPayoutRate">Dividend Payout Rate (%)</Label>
+              <Input
+                type="number"
+                value={dividendPayoutRate}
+                onChange={(e) => setDividendPayoutRate(e.target.value)}
+                placeholder="30"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Percentage of profits paid as dividends</p>
+            </div>
 
+            <div>
+              <Label htmlFor="revenueGrowthRate">Revenue Growth Rate (%)</Label>
+              <Input
+                type="number"
+                value={revenueGrowthRate}
+                onChange={(e) => setRevenueGrowthRate(e.target.value)}
+                placeholder="10"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="expenseGrowthRate">Expense Growth Rate (%)</Label>
+              <Input
+                type="number"
+                value={expenseGrowthRate}
+                onChange={(e) => setExpenseGrowthRate(e.target.value)}
+                placeholder="5"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="customerGrowthRate">Customer Growth Rate (%)</Label>
+              <Input
+                type="number"
+                value={customerGrowthRate}
+                onChange={(e) => setCustomerGrowthRate(e.target.value)}
+                placeholder="15"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Operational Costs Card */}
+      <Card className="shadow-lg border-teal-200">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Operational Costs & Expenses</CardTitle>
+          <CardDescription>Annual operational and capital expenditure</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <Label htmlFor="payrollExpenses">Payroll Expenses ($)</Label>
+              <Input
+                type="number"
+                value={payrollExpenses}
+                onChange={(e) => setPayrollExpenses(e.target.value)}
+                placeholder="100000"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Annual payroll costs</p>
+            </div>
+
+            <div>
+              <Label htmlFor="operationalCosts">Operational Costs ($)</Label>
+              <Input
+                type="number"
+                value={operationalCosts}
+                onChange={(e) => setOperationalCosts(e.target.value)}
+                placeholder="75000"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Annual operational expenses</p>
+            </div>
+
+            <div>
+              <Label htmlFor="capitalCosts">Capital Costs ($)</Label>
+              <Input
+                type="number"
+                value={capitalCosts}
+                onChange={(e) => setCapitalCosts(e.target.value)}
+                placeholder="50000"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Annual capital expenditure</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Salary Growth Assumptions Card */}
+      <Card className="shadow-lg border-teal-200">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Salary Growth Assumptions</CardTitle>
+          <CardDescription>Expected annual salary increases for different employee categories</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="annualSalaryIncrease">Annual Salary Increase (%)</Label>
+              <Input
+                type="number"
+                value={annualSalaryIncrease}
+                onChange={(e) => setAnnualSalaryIncrease(e.target.value)}
+                placeholder="3"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Expected annual salary growth for staff</p>
+            </div>
+
+            <div>
+              <Label htmlFor="annualManagementSalaryIncrease">Management Salary Increase (%)</Label>
+              <Input
+                type="number"
+                value={annualManagementSalaryIncrease}
+                onChange={(e) => setAnnualManagementSalaryIncrease(e.target.value)}
+                placeholder="5"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Expected annual salary growth for management</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1140,6 +1337,14 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
           onServicesChange={setServices}
           onServiceBusinessModelChange={setServiceBusinessModel}
           yearsInBusiness={yearsInBusiness}
+        />
+      )}
+
+      {/* Retail Business Add-on */}
+      {companyType === 'retail' && (
+        <RetailBusinessAddon
+          retailBusinessModel={retailBusinessModel}
+          onRetailBusinessModelChange={setRetailBusinessModel}
         />
       )}
 
@@ -2182,6 +2387,26 @@ const BaseHistoricalDataForm: React.FC<BaseHistoricalDataFormProps> = ({ onSubmi
                     onChange={(e) => setDebtPct(e.target.value)}
                     placeholder="30"
                   />
+                </div>
+                <div>
+                  <Label>Paid Up Capital ($)</Label>
+                  <Input
+                    type="number"
+                    value={paidUpCapital}
+                    onChange={(e) => setPaidUpCapital(e.target.value)}
+                    placeholder="100000"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Total capital contributed by shareholders</p>
+                </div>
+                <div>
+                  <Label>Investment Equity ($)</Label>
+                  <Input
+                    type="number"
+                    value={investmentEquity}
+                    onChange={(e) => setInvestmentEquity(e.target.value)}
+                    placeholder="150000"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Additional equity investments</p>
                 </div>
               </div>
             </div>

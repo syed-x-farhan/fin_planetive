@@ -161,9 +161,7 @@ export const HistoricalImportWizard = ({
       try {
         const fileToProcess = file || selectedFile;
         if (fileToProcess) {
-          console.log('Processing financial statements file:', fileToProcess.name);
           const processedData = await processFinancialStatementsExcelData(fileToProcess);
-          console.log('Processed financial statements data:', processedData);
           setProcessedFinancialData(processedData);
         }
       } catch (error) {
@@ -302,10 +300,7 @@ export const HistoricalImportWizard = ({
                 </p>
                 <button 
                   onClick={() => {
-                    console.log('Debug info:');
-                    console.log('Selected file:', selectedFile);
-                    console.log('Parsed data:', parsedData);
-                    console.log('Data type:', dataType);
+                    // Debug info available in console
                   }}
                   className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
                 >

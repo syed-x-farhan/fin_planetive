@@ -57,7 +57,7 @@ export function mapPeriodsToSections({ income_statement, cash_flow }: any): {
       section = 'current';
     }
     return {
-      date,
+      date: date.split('-')[0], // Extract only FY2027 from FY2027-January
       revenue: revenueItem?.values?.[idx] ?? 0,
       ebitda: ebitdaItem?.values?.[idx] ?? 0,
       cashFlow: cashFlowArr[idx] ?? 0, // Use cash_flow data directly

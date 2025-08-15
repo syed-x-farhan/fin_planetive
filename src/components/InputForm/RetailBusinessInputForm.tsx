@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Plus, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { Trash2, Plus, ChevronDown, ChevronUp, HelpCircle, Upload } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -15,24 +15,48 @@ interface Product {
   units: string;
   growthRate?: string;
   cost: string;
+  yearlyValues?: { year: string; units: string }[];
 }
 
 interface Expense {
   name: string;
   amount: string;
   growthRate?: string;
+  yearlyValues?: { year: string; amount: string }[];
 }
 
-interface Equipment {
+interface CapitalExpenditure {
   name: string;
-  cost: string;
+  assetType: 'tangible' | 'intangible';
+  // Simple method fields
+  cost?: string;
   usefulLife?: string;
   purchaseDate?: string;
-  notes?: string;
   depreciationMethod?: 'straight_line' | 'double_declining' | 'sum_of_years_digits' | 'units_of_production';
   salvageValue?: string; // for SYD
   totalUnits?: string; // for Units of Production
   unitsPerYear?: string[]; // for Units of Production
+  // Advanced method fields
+  depreciationRate?: string;
+  yearlyValues?: { year: string; amount: string }[];
+  // Common fields
+  notes?: string;
+}
+
+interface DividendPayout {
+  year: string;
+  percentage: string;
+}
+
+interface CapitalCost {
+  name: string;
+  assetType: 'tangible' | 'intangible';
+  depreciationRate: string;
+  year1: string;
+  year2Addition: string;
+  year3Addition: string;
+  year4Addition: string;
+  year5Addition: string;
 }
 
 interface Loan {
@@ -91,6 +115,9 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
   // Section toggles
   const [hasProducts, setHasProducts] = useState(initialValues?.products ? true : true);
   const [hasExpenses, setHasExpenses] = useState(initialValues?.expenses ? true : true);
+  const [hasCapitalExpenditure, setHasCapitalExpenditure] = useState(initialValues?.capitalExpenditures ? true : false);
+  const [hasDividendPayout, setHasDividendPayout] = useState(initialValues?.dividendPayouts ? true : false);
+  const [hasCapitalCosts, setHasCapitalCosts] = useState(initialValues?.capitalCosts ? true : false);
   const [hasEquipment, setHasEquipment] = useState(initialValues?.equipment ? true : false);
   const [hasLoan, setHasLoan] = useState(initialValues?.loans ? true : false);
   const [hasTax, setHasTax] = useState(initialValues?.taxRate !== undefined ? true : true);
@@ -110,9 +137,16 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
   const [hasShareholders, setHasShareholders] = useState(initialValues?.shareholders ? true : false);
   const [shareholders, setShareholders] = useState(initialValues?.shareholders || [{ name: '', amount: '', percent: '', notes: '' }]);
   const [expenseInputType, setExpenseInputType] = useState<'monthly' | 'annual'>('monthly');
+  const [expenseInputMethod, setExpenseInputMethod] = useState<'growth_rate' | 'yearly_values'>('growth_rate');
   const [fiscalYearStart, setFiscalYearStart] = useState(initialValues?.fiscalYearStart || 'January');
+  
+  // Capital expenditure controls
+  const [capexInputMethod, setCapexInputMethod] = useState<'simple' | 'advanced'>('simple');
+  const [capexYears, setCapexYears] = useState(5);
   // Add revenue input type toggle
   const [revenueInputType, setRevenueInputType] = useState<'monthly' | 'annual'>('monthly');
+  const [revenueInputMethod, setRevenueInputMethod] = useState<'growth_rate' | 'yearly_values'>('growth_rate');
+  const [revenueYears, setRevenueYears] = useState(5);
   // Add state for Discount Rate and Terminal Growth Rate
   const [discountRate, setDiscountRate] = useState(initialValues?.discountRate || '10');
   const [terminalGrowth, setTerminalGrowth] = useState(initialValues?.terminalGrowth || '2');
@@ -156,7 +190,14 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
   // Dynamic lists
   const [products, setProducts] = useState<Product[]>(initialValues?.products || [{ name: '', price: '', units: '', growthRate: '', cost: '' }]);
   const [expenses, setExpenses] = useState<Expense[]>(initialValues?.expenses || [{ name: '', amount: '', growthRate: '' }]);
-  const [equipment, setEquipment] = useState<Equipment[]>(initialValues?.equipment || []);
+  const [equipment, setEquipment] = useState<CapitalExpenditure[]>(initialValues?.equipment || []);
+  const [capitalExpenditures, setCapitalExpenditures] = useState<CapitalExpenditure[]>(initialValues?.capitalExpenditures || []);
+  const [dividendPayouts, setDividendPayouts] = useState<DividendPayout[]>(initialValues?.dividendPayouts || [
+    { year: 'Year 1', percentage: '0' },
+    { year: 'Year 2', percentage: '15' },
+    { year: 'Year 3+', percentage: '20' }
+  ]);
+  const [capitalCosts, setCapitalCosts] = useState<CapitalCost[]>(initialValues?.capitalCosts || []);
   const [loans, setLoans] = useState<Loan[]>(initialValues?.loans || []);
   const [other, setOther] = useState<OtherItem[]>(initialValues?.other || []);
   const [investments, setInvestments] = useState<Investment[]>(initialValues?.investments || []);
@@ -165,25 +206,208 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
   const [inventoryDays, setInventoryDays] = useState(initialValues?.inventoryDays || '');
   const [selfFunding, setSelfFunding] = useState(initialValues?.selfFunding || '');
   const [taxRate, setTaxRate] = useState(initialValues?.taxRate || '25');
+  
+  // Customer numbers for multiple years
+  const [customerNumbers, setCustomerNumbers] = useState<{ year: string; customers: string }[]>(
+    initialValues?.customerNumbers || [
+      { year: '1', customers: '' },
+      { year: '2', customers: '' },
+      { year: '3', customers: '' },
+      { year: '4', customers: '' },
+      { year: '5', customers: '' }
+    ]
+  );
+  
+  // Expense years for yearly values method
+  const [expenseYears, setExpenseYears] = useState<number>(5);
 
   // Handlers for dynamic lists
+  const handleCustomerNumberChange = (idx: number, field: 'year' | 'customers', value: string) => {
+    setCustomerNumbers(c => c.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+  
+  const addCustomerYear = () => {
+    const nextYear = (customerNumbers.length + 1).toString();
+    setCustomerNumbers(c => [...c, { year: nextYear, customers: '' }]);
+  };
+  
+  const removeCustomerYear = (idx: number) => {
+    if (customerNumbers.length > 1) {
+      setCustomerNumbers(c => {
+        const newNumbers = c.filter((_, i) => i !== idx);
+        // Renumber the years to be sequential
+        return newNumbers.map((item, i) => ({ ...item, year: (i + 1).toString() }));
+      });
+    }
+  };
+  
   const handleProductChange = (idx: number, field: keyof Product, value: string) => {
     setProducts(products => products.map((p, i) => i === idx ? { ...p, [field]: value } : p));
   };
-  const addProduct = () => setProducts([...products, { name: '', price: '', units: '', growthRate: '', cost: '' }]);
+  
+  const handleProductYearlyValueChange = (idx: number, yearIdx: number, value: string) => {
+    setProducts(products => products.map((product, i) => {
+      if (i === idx) {
+        const updatedYearlyValues = [...(product.yearlyValues || [])];
+        while (updatedYearlyValues.length <= yearIdx) {
+          updatedYearlyValues.push({ year: (updatedYearlyValues.length + 1).toString(), units: '' });
+        }
+        updatedYearlyValues[yearIdx] = { ...updatedYearlyValues[yearIdx], units: value };
+        return { ...product, yearlyValues: updatedYearlyValues };
+      }
+      return product;
+    }));
+  };
+  
+  const addProduct = () => setProducts([...products, { name: '', price: '', units: '', growthRate: '', cost: '', yearlyValues: [] }]);
   const removeProduct = (idx: number) => setProducts(products => products.filter((_, i) => i !== idx));
+  
+  const addRevenueYear = () => {
+    setRevenueYears(prev => prev + 1);
+    // Update existing products to include the new year
+    setProducts(products => products.map(product => ({
+      ...product,
+      yearlyValues: [...(product.yearlyValues || []), { year: (product.yearlyValues?.length || 0) + 1 + '', units: '' }]
+    })));
+  };
+  
+  const removeRevenueYear = () => {
+    if (revenueYears > 1) {
+      setRevenueYears(prev => prev - 1);
+      // Update existing products to remove the last year
+      setProducts(products => products.map(product => ({
+        ...product,
+        yearlyValues: product.yearlyValues?.slice(0, revenueYears - 1) || []
+      })));
+    }
+  };
 
   const handleExpenseChange = (idx: number, field: keyof Expense, value: string) => {
     setExpenses(expenses => expenses.map((e, i) => i === idx ? { ...e, [field]: value } : e));
   };
-  const addExpense = () => setExpenses([...expenses, { name: '', amount: '', growthRate: '' }]);
-  const removeExpense = (idx: number) => setExpenses(expenses => expenses.filter((_, i) => i !== idx));
-
-  const handleEquipmentChange = (idx: number, field: keyof Equipment, value: string | string[]) => {
-    setEquipment(eq => eq.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  
+  const handleExpenseYearlyValueChange = (expenseIdx: number, yearIdx: number, value: string) => {
+    setExpenses(expenses => expenses.map((expense, i) => {
+      if (i === expenseIdx) {
+        const yearlyValues = expense.yearlyValues || [];
+        const updatedYearlyValues = yearlyValues.map((yv, j) => 
+          j === yearIdx ? { ...yv, amount: value } : yv
+        );
+        return { ...expense, yearlyValues: updatedYearlyValues };
+      }
+      return expense;
+    }));
   };
-  const addEquipment = () => setEquipment(eq => [...eq, { name: '', cost: '', notes: '', usefulLife: '', purchaseDate: '', depreciationMethod: 'straight_line' }]);
-  const removeEquipment = (idx: number) => setEquipment(eq => eq.filter((_, i) => i !== idx));
+  
+  const addExpense = () => setExpenses([...expenses, { 
+    name: '', 
+    amount: '', 
+    growthRate: '',
+    yearlyValues: Array.from({ length: expenseYears }, (_, i) => ({ 
+      year: (i + 1).toString(), 
+      amount: '' 
+    }))
+  }]);
+  const removeExpense = (idx: number) => setExpenses(expenses => expenses.filter((_, i) => i !== idx));
+  
+  const addExpenseYear = () => {
+    setExpenseYears(prev => prev + 1);
+    // Update existing expenses to include the new year
+    setExpenses(expenses => expenses.map(expense => ({
+      ...expense,
+      yearlyValues: [
+        ...(expense.yearlyValues || []),
+        { year: (expenseYears + 1).toString(), amount: '' }
+      ]
+    })));
+  };
+  
+  const removeExpenseYear = () => {
+    if (expenseYears > 1) {
+      setExpenseYears(prev => prev - 1);
+      // Update existing expenses to remove the last year
+      setExpenses(expenses => expenses.map(expense => ({
+        ...expense,
+        yearlyValues: expense.yearlyValues?.slice(0, expenseYears - 1) || []
+      })));
+    }
+  };
+
+  const handleCapitalExpenditureChange = (idx: number, field: keyof CapitalExpenditure, value: string | string[]) => {
+    setCapitalExpenditures(capex => capex.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+  
+  const handleCapitalExpenditureYearlyValueChange = (idx: number, yearIdx: number, value: string) => {
+    setCapitalExpenditures(capex => capex.map((item, i) => {
+      if (i === idx) {
+        const updatedYearlyValues = [...(item.yearlyValues || [])];
+        while (updatedYearlyValues.length <= yearIdx) {
+          updatedYearlyValues.push({ year: (updatedYearlyValues.length + 1).toString(), amount: '' });
+        }
+        updatedYearlyValues[yearIdx] = { ...updatedYearlyValues[yearIdx], amount: value };
+        return { ...item, yearlyValues: updatedYearlyValues };
+      }
+      return item;
+    }));
+  };
+  
+  const addCapitalExpenditure = () => setCapitalExpenditures(capex => [...capex, { 
+    name: '', 
+    assetType: 'tangible', 
+    cost: '',
+    usefulLife: '',
+    purchaseDate: '',
+    depreciationRate: '15',
+    yearlyValues: [],
+    notes: ''
+  }]);
+  
+  const removeCapitalExpenditure = (idx: number) => setCapitalExpenditures(capex => capex.filter((_, i) => i !== idx));
+  
+  const addCapexYear = () => {
+    setCapexYears(prev => Math.min(prev + 1, 10));
+  };
+  
+  const removeCapexYear = () => {
+    if (capexYears > 2) {
+      setCapexYears(prev => prev - 1);
+      // Update existing capital expenditures to remove the last year
+      setCapitalExpenditures(capex => capex.map(item => ({
+        ...item,
+        yearlyValues: item.yearlyValues?.slice(0, capexYears - 1) || []
+      })));
+    }
+  };
+
+  const handleDividendPayoutChange = (idx: number, field: keyof DividendPayout, value: string) => {
+    setDividendPayouts(dividends => dividends.map((dividend, i) => i === idx ? { ...dividend, [field]: value } : dividend));
+  };
+  
+  const addDividendPayout = () => setDividendPayouts(dividends => {
+    const nextYearNumber = dividends.length + 1;
+    const yearLabel = nextYearNumber <= 2 ? `Year ${nextYearNumber}` : `Year ${nextYearNumber}+`;
+    return [...dividends, { 
+      year: yearLabel, 
+      percentage: '0' 
+    }];
+  });
+  
+  const removeDividendPayout = (idx: number) => setDividendPayouts(dividends => dividends.filter((_, i) => i !== idx));
+
+  const handleCapitalCostChange = (idx: number, field: keyof CapitalCost, value: string) => {
+    setCapitalCosts(costs => costs.map((cost, i) => i === idx ? { ...cost, [field]: value } : cost));
+  };
+  const addCapitalCost = () => setCapitalCosts(costs => [...costs, { 
+    name: '', 
+    assetType: 'intangible', 
+    depreciationRate: '15', 
+    year1: '', 
+    year2Addition: '', 
+    year3Addition: '', 
+    year4Addition: '', 
+    year5Addition: '' 
+  }]);
+  const removeCapitalCost = (idx: number) => setCapitalCosts(costs => costs.filter((_, i) => i !== idx));
 
   const handleLoanChange = (idx: number, field: keyof Loan, value: string) => {
     setLoans(l => l.map((item, i) => i === idx ? { ...item, [field]: value } : item));
@@ -237,25 +461,59 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
       }));
     }
     onSubmit({
+      customerNumbers: customerNumbers.map(c => ({
+        year: c.year,
+        customers: sanitizeNumber(c.customers)
+      })),
       products: hasProducts ? processedProducts.map(p => ({
         ...p,
         price: sanitizeNumber(p.price),
-        units: sanitizeNumber(p.units),
-        growthRate: sanitizeNumber(p.growthRate),
+        units: revenueInputMethod === 'growth_rate' ? sanitizeNumber(p.units) : undefined,
+        growthRate: revenueInputMethod === 'growth_rate' ? sanitizeNumber(p.growthRate) : undefined,
         cost: sanitizeNumber(p.cost),
+        yearlyValues: revenueInputMethod === 'yearly_values' ? p.yearlyValues?.map(yv => ({
+          year: yv.year,
+          units: sanitizeNumber(yv.units)
+        })) : undefined,
       })) : [],
+      revenueInputMethod,
+      revenueYears,
       expenses: hasExpenses ? processedExpenses.map(e => ({
         ...e,
-        amount: sanitizeNumber(e.amount),
-        growthRate: sanitizeNumber(e.growthRate),
+        amount: expenseInputMethod === 'growth_rate' ? sanitizeNumber(e.amount) : undefined,
+        growthRate: expenseInputMethod === 'growth_rate' ? sanitizeNumber(e.growthRate) : undefined,
+        yearlyValues: expenseInputMethod === 'yearly_values' ? e.yearlyValues?.map(yv => ({
+          year: yv.year,
+          amount: sanitizeNumber(yv.amount)
+        })) : undefined,
       })) : [],
-      equipment: hasEquipment ? equipment.map(eq => ({
-        ...eq,
-        cost: sanitizeNumber(eq.cost),
-        usefulLife: sanitizeNumber(eq.usefulLife),
-        salvageValue: sanitizeNumber(eq.salvageValue),
-        totalUnits: sanitizeNumber(eq.totalUnits),
-        unitsPerYear: Array.isArray(eq.unitsPerYear) ? eq.unitsPerYear.map(sanitizeNumber) : [],
+      capitalExpenditures: hasCapitalExpenditure ? capitalExpenditures.map(capex => ({
+        ...capex,
+        cost: sanitizeNumber(capex.cost),
+        usefulLife: sanitizeNumber(capex.usefulLife),
+        depreciationRate: sanitizeNumber(capex.depreciationRate),
+        salvageValue: sanitizeNumber(capex.salvageValue),
+        totalUnits: sanitizeNumber(capex.totalUnits),
+        unitsPerYear: Array.isArray(capex.unitsPerYear) ? capex.unitsPerYear.map(sanitizeNumber) : [],
+        yearlyValues: capex.yearlyValues?.map(yv => ({
+          year: yv.year,
+          amount: sanitizeNumber(yv.amount)
+        })) || [],
+      })) : [],
+      capexInputMethod,
+      capexYears,
+      capitalCosts: hasCapitalCosts ? capitalCosts.map(cost => ({
+        ...cost,
+        depreciationRate: sanitizeNumber(cost.depreciationRate),
+        year1: sanitizeNumber(cost.year1),
+        year2Addition: sanitizeNumber(cost.year2Addition),
+        year3Addition: sanitizeNumber(cost.year3Addition),
+        year4Addition: sanitizeNumber(cost.year4Addition),
+        year5Addition: sanitizeNumber(cost.year5Addition),
+      })) : [],
+      dividendPayouts: hasDividendPayout ? dividendPayouts.map(dividend => ({
+        ...dividend,
+        percentage: sanitizeNumber(dividend.percentage)
       })) : [],
       inventoryDays: sanitizeNumber(inventoryDays),
       selfFunding: sanitizeNumber(selfFunding),
@@ -318,11 +576,42 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
     });
   };
 
+  // Auto-lock input type to annual when yearly values method is selected
+  React.useEffect(() => {
+    if (expenseInputMethod === 'yearly_values') {
+      setExpenseInputType('annual');
+    }
+  }, [expenseInputMethod]);
+
+  React.useEffect(() => {
+    if (revenueInputMethod === 'yearly_values') {
+      setRevenueInputType('annual');
+    }
+  }, [revenueInputMethod]);
+  
   // If initialValues changes after mount, update state
   React.useEffect(() => {
     if (initialValues) {
+      setCustomerNumbers(initialValues.customerNumbers || [
+        { year: '1', customers: '' },
+        { year: '2', customers: '' },
+        { year: '3', customers: '' },
+        { year: '4', customers: '' },
+        { year: '5', customers: '' }
+      ]);
       setProducts(initialValues.products || [{ name: '', price: '', units: '', growthRate: '', cost: '' }]);
-      setExpenses(initialValues.expenses || [{ name: '', amount: '', growthRate: '' }]);
+      setExpenses(initialValues.expenses || [{ 
+        name: '', 
+        amount: '', 
+        growthRate: '',
+        yearlyValues: [
+          { year: '1', amount: '' },
+          { year: '2', amount: '' },
+          { year: '3', amount: '' },
+          { year: '4', amount: '' },
+          { year: '5', amount: '' }
+        ]
+      }]);
       setEquipment(initialValues.equipment || []);
       setLoans(initialValues.loans || []);
       setOther(initialValues.other || []);
@@ -348,7 +637,9 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
       setApDays(initialValues.accountsPayable?.days || '');
       setHasShareholders(initialValues.shareholders ? true : false);
       setShareholders(initialValues.shareholders || [{ name: '', amount: '', percent: '', notes: '' }]);
-      setExpenseInputType('monthly');
+      setExpenseInputType(initialValues.expenseInputType || 'monthly');
+      setExpenseInputMethod(initialValues.expenseInputMethod || 'growth_rate');
+      setExpenseYears(initialValues.expenseYears || 5);
       setFiscalYearStart(initialValues.fiscalYearStart || 'January');
       setRevenueInputType(initialValues.revenueInputType || 'monthly');
       setDiscountRate(initialValues.discountRate || '10');
@@ -386,13 +677,20 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
 
   return (
     <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-10 py-8 px-2">
-      {onBack && (
-        <div className="mb-6">
-          <Button type="button" variant="outline" onClick={onBack} className="mr-2">
-            ← Back
+      {/* Header with Back and Import buttons */}
+      <div className="flex items-center justify-end mb-6">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <Button type="button" variant="outline" onClick={onBack}>
+              ← Back
+            </Button>
+          )}
+          <Button type="button" variant="outline" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Import from Excel
           </Button>
         </div>
-      )}
+      </div>
       {/* Fiscal Year Selector */}
       <div className="mb-6">
         <Label className="block mb-2 font-semibold">Fiscal Year Starts In</Label>
@@ -408,6 +706,56 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
           ))}
         </select>
       </div>
+      
+      {/* Customer Numbers Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold">Total number of customers</CardTitle>
+          <div className="mt-1 mb-2">
+            <div className="font-semibold text-base">What is your projected customer count for each year?</div>
+            <div className="text-sm text-muted-foreground">Enter the total number of customers you expect to have for each year of your forecast period.</div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+            {customerNumbers.map((item, idx) => (
+              <div key={idx} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Year {item.year}</Label>
+                  {customerNumbers.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeCustomerYear(idx)}
+                      className="h-4 w-4 p-0 hover:bg-red-100 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  placeholder="e.g., 67"
+                  value={item.customers}
+                  onChange={(e) => handleCustomerNumberChange(idx, 'customers', e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addCustomerYear}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Another Year
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
       {/* Products Section */}
       <Card>
         <CardHeader>
@@ -430,31 +778,137 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
           </div>
         </CardHeader>
         {hasProducts && (
-          <CardContent className="space-y-2 mb-10">
-            <div className="font-semibold text-lg mb-4">Products</div>
-            <Label className="block mb-4">Add your products</Label>
-            {/* Header Row for Products */}
-            <div className="grid grid-cols-6 md:grid-cols-7 gap-4 items-center mb-2 px-1">
-              <div className="text-xs font-semibold text-muted-foreground">Product Name</div>
-              <div className="text-xs font-semibold text-muted-foreground">Price</div>
-              <div className="text-xs font-semibold text-muted-foreground">Units/{revenueInputType === 'monthly' ? 'Month' : 'Year'}</div>
-              <div className="text-xs font-semibold text-muted-foreground">Growth %</div>
-              <div className="text-xs font-semibold text-muted-foreground">Cost/Item</div>
-              <div className="text-xs" />
-              <div className="text-xs" />
-            </div>
-            {products.map((product, idx) => (
-              <div key={idx} className="grid grid-cols-6 md:grid-cols-7 gap-4 items-center mb-2 px-1">
-                <Input placeholder="Product Name" value={product.name} onChange={e => handleProductChange(idx, 'name', e.target.value)} className="flex-1" />
-                <Input placeholder="$20" value={product.price} onChange={e => handleProductChange(idx, 'price', e.target.value)} className="w-24" />
-                <Input placeholder={revenueInputType === 'monthly' ? '100' : '1200'} value={product.units} onChange={e => handleProductChange(idx, 'units', e.target.value)} className="w-24" />
-                <Input placeholder="10%" value={product.growthRate} onChange={e => handleProductChange(idx, 'growthRate', e.target.value)} className="w-24" />
-                <Input placeholder="$5" value={product.cost} onChange={e => handleProductChange(idx, 'cost', e.target.value)} className="w-24" />
-                <div />
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeProduct(idx)} className="justify-self-end"><Trash2 className="w-4 h-4" /></Button>
+          <CardContent className="space-y-4 mb-10">
+            {/* Method Selection */}
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="revenueInputMethod" className="font-medium">Method:</Label>
+                <select 
+                  id="revenueInputMethod" 
+                  value={revenueInputMethod} 
+                  onChange={e => setRevenueInputMethod(e.target.value as 'growth_rate' | 'yearly_values')} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="growth_rate">Growth Rate</option>
+                  <option value="yearly_values">Yearly Values</option>
+                </select>
               </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addProduct} className="mt-2"><Plus className="w-4 h-4 mr-1" /> Add Another Product</Button>
+              {revenueInputMethod === 'yearly_values' && (
+                <div className="flex items-center gap-2">
+                  <Label className="font-medium">Years:</Label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeRevenueYear}
+                      disabled={revenueYears <= 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      -
+                    </Button>
+                    <span className="px-3 text-sm font-medium bg-white border rounded py-1 min-w-[3rem] text-center">{revenueYears}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addRevenueYear}
+                      className="h-8 w-8 p-0"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Products List */}
+            <div className="space-y-4">
+              {products.map((product, idx) => (
+                <div key={idx} className="bg-white border rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Product Name</Label>
+                        <Input 
+                          placeholder="Product Name" 
+                          value={product.name} 
+                          onChange={e => handleProductChange(idx, 'name', e.target.value)} 
+                          className="font-medium"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Price per Unit ($)</Label>
+                        <Input 
+                          placeholder="$20" 
+                          value={product.price} 
+                          onChange={e => handleProductChange(idx, 'price', e.target.value)} 
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Cost per Unit ($)</Label>
+                        <Input 
+                          placeholder="$5" 
+                          value={product.cost} 
+                          onChange={e => handleProductChange(idx, 'cost', e.target.value)} 
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => removeProduct(idx)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-4"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {revenueInputMethod === 'growth_rate' ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Units Sold ({revenueInputType === 'monthly' ? 'per month' : 'per year'})</Label>
+                        <Input 
+                          placeholder={revenueInputType === 'monthly' ? '100' : '1200'} 
+                          value={product.units} 
+                          onChange={e => handleProductChange(idx, 'units', e.target.value)} 
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Annual Growth Rate (%)</Label>
+                        <Input 
+                          placeholder="10%" 
+                          value={product.growthRate || ''} 
+                          onChange={e => handleProductChange(idx, 'growthRate', e.target.value)} 
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-2 block">Yearly Units Sold ({revenueInputType === 'monthly' ? 'per month' : 'per year'})</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                        {Array.from({ length: revenueYears }, (_, i) => (
+                          <div key={i} className="flex flex-col">
+                            <Label className="text-xs text-muted-foreground mb-1">Year {i + 1}</Label>
+                            <Input 
+                              placeholder={revenueInputType === 'monthly' ? '100' : '1200'} 
+                              value={product.yearlyValues?.[i]?.units || ''} 
+                              onChange={e => handleProductYearlyValueChange(idx, i, e.target.value)} 
+                              className="text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              <Button type="button" variant="outline" onClick={addProduct} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Add Another Product
+              </Button>
+            </div>
           </CardContent>
         )}
       </Card>
@@ -466,124 +920,446 @@ export const RetailBusinessInputForm: React.FC<RetailBusinessInputFormProps> = (
             Business Expenses
             <Switch checked={hasExpenses} onCheckedChange={setHasExpenses} />
           </CardTitle>
-          <div className="mt-1 mb-2 flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="font-semibold text-base">What are your regular business expenses?</div>
-              <div className="text-sm text-muted-foreground">Add your recurring costs like rent, salaries, marketing, or utilities.</div>
-            </div>
-            <div className="mt-2 md:mt-0 flex items-center gap-2">
-              <Label htmlFor="expenseInputType" className="mr-2">Enter as:</Label>
-              <select id="expenseInputType" value={expenseInputType} onChange={e => setExpenseInputType(e.target.value as 'monthly' | 'annual')} className="border rounded px-2 py-1">
-                <option value="monthly">Monthly</option>
-                <option value="annual">Annual</option>
-              </select>
-            </div>
+          <div className="mt-1 mb-2">
+            <div className="font-semibold text-base">What are your regular business expenses?</div>
+            <div className="text-sm text-muted-foreground">Add your recurring costs like rent, salaries, marketing, or utilities.</div>
           </div>
         </CardHeader>
         {hasExpenses && (
-          <CardContent className="space-y-2 mb-10">
-            <div className="font-semibold text-lg mb-4">{expenseInputType === 'monthly' ? 'Monthly Fixed Expenses' : 'Annual Fixed Expenses'}</div>
-            <Label className="block mb-4">Add your {expenseInputType === 'monthly' ? 'monthly' : 'annual'} expenses</Label>
-            {/* Header Row for Expenses */}
-            <div className="flex gap-x-4 items-center mb-2 px-1">
-              <div className="text-xs font-semibold text-muted-foreground w-40">Expense Name</div>
-              <div className="text-xs font-semibold text-muted-foreground w-24">Amount ({expenseInputType === 'monthly' ? '$/month' : '$/year'})</div>
-              <div className="text-xs font-semibold text-muted-foreground w-20">Growth %</div>
-              <div className="text-xs w-10" />
-            </div>
-            {expenses.map((expense, idx) => (
-              <div key={idx} className="flex gap-x-4 items-center mb-2 px-1">
-                <Input placeholder="Expense Name" value={expense.name} onChange={e => handleExpenseChange(idx, 'name', e.target.value)} className="w-40" />
-                <Input placeholder={expenseInputType === 'monthly' ? '$200' : '$2400'} value={expense.amount} onChange={e => handleExpenseChange(idx, 'amount', e.target.value)} className="w-24" />
-                <Input placeholder="5%" value={expense.growthRate || ''} onChange={e => handleExpenseChange(idx, 'growthRate', e.target.value)} className="w-20" />
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeExpense(idx)} className="ml-auto"><Trash2 className="w-4 h-4" /></Button>
+          <CardContent className="space-y-4 mb-10">
+            {/* Method Selection */}
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="expenseInputType" className="font-medium">Enter as:</Label>
+                <select 
+                  id="expenseInputType" 
+                  value={expenseInputType} 
+                  onChange={e => setExpenseInputType(e.target.value as 'monthly' | 'annual')} 
+                  disabled={expenseInputMethod === 'yearly_values'}
+                  className={`border rounded px-3 py-2 ${expenseInputMethod === 'yearly_values' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="annual">Annual</option>
+                </select>
               </div>
-            ))}
-            <Button type="button" variant="outline" onClick={addExpense} className="mt-2"><Plus className="w-4 h-4 mr-1" /> Add Another Expense</Button>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="expenseInputMethod" className="font-medium">Method:</Label>
+                <select 
+                  id="expenseInputMethod" 
+                  value={expenseInputMethod} 
+                  onChange={e => setExpenseInputMethod(e.target.value as 'growth_rate' | 'yearly_values')} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="growth_rate">Growth Rate</option>
+                  <option value="yearly_values">Yearly Values</option>
+                </select>
+              </div>
+              {expenseInputMethod === 'yearly_values' && (
+                <div className="flex items-center gap-2">
+                  <Label className="font-medium">Years:</Label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeExpenseYear}
+                      disabled={expenseYears <= 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      -
+                    </Button>
+                    <span className="px-3 text-sm font-medium bg-white border rounded py-1 min-w-[3rem] text-center">{expenseYears}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addExpenseYear}
+                      className="h-8 w-8 p-0"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Expenses List */}
+            <div className="space-y-4">
+              {expenses.map((expense, idx) => (
+                <div key={idx} className="bg-white border rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <Input 
+                      placeholder="Expense Name" 
+                      value={expense.name} 
+                      onChange={e => handleExpenseChange(idx, 'name', e.target.value)} 
+                      className="w-64 font-medium"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => removeExpense(idx)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {expenseInputMethod === 'growth_rate' ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Amount ({expenseInputType === 'monthly' ? '$/month' : '$/year'})</Label>
+                        <Input 
+                          placeholder={expenseInputType === 'monthly' ? '$200' : '$2400'} 
+                          value={expense.amount} 
+                          onChange={e => handleExpenseChange(idx, 'amount', e.target.value)} 
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Annual Growth Rate</Label>
+                        <Input 
+                          placeholder="5%" 
+                          value={expense.growthRate || ''} 
+                          onChange={e => handleExpenseChange(idx, 'growthRate', e.target.value)} 
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-2 block">Yearly Values ({expenseInputType === 'monthly' ? '$/month' : '$/year'})</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                        {Array.from({ length: expenseYears }, (_, i) => (
+                          <div key={i} className="flex flex-col">
+                            <Label className="text-xs text-muted-foreground mb-1">Year {i + 1}</Label>
+                            <Input 
+                              placeholder={expenseInputType === 'monthly' ? '$200' : '$2400'} 
+                              value={expense.yearlyValues?.[i]?.amount || ''} 
+                              onChange={e => handleExpenseYearlyValueChange(idx, i, e.target.value)} 
+                              className="text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              <Button type="button" variant="outline" onClick={addExpense} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Add Another Expense
+              </Button>
+            </div>
           </CardContent>
         )}
       </Card>
 
-      {/* Equipment Section */}
+      {/* Capital Expenditures Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            Equipment / Shop Setup
-            <Switch checked={hasEquipment} onCheckedChange={setHasEquipment} />
+            Capital Expenditures
+            <Switch checked={hasCapitalExpenditure} onCheckedChange={setHasCapitalExpenditure} />
           </CardTitle>
           <div className="mt-1 mb-2">
-            <div className="font-semibold text-base">Did you buy any equipment or setup your shop?</div>
-            <div className="text-sm text-muted-foreground">List any one-time purchases like shelves, POS, or furniture for your retail business.</div>
+            <div className="font-semibold text-base">Do you have any capital investments or equipment purchases?</div>
+            <div className="text-sm text-muted-foreground">Add equipment, development costs, licenses, patents, or other capital investments.</div>
           </div>
         </CardHeader>
-        {hasEquipment && (
-          <CardContent className="space-y-2 mb-10">
-            <div className="font-semibold text-lg mb-4">Equipment / Shop Setup</div>
-            <Label className="block mb-4">Have you bought any equipment or setup your shop?</Label>
-            {equipment.map((item, idx) => {
-              const needsExtra = item.depreciationMethod === 'sum_of_years_digits' || item.depreciationMethod === 'units_of_production';
-              return (
-                <div key={idx} className="bg-white rounded-lg shadow border mb-6 p-6 flex flex-col gap-2 relative">
-                  {/* Delete button in top-right */}
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeEquipment(idx)} className="absolute top-2 right-2 z-10"><Trash2 className="w-4 h-4" /></Button>
-                  <div className="flex flex-col md:flex-row md:items-end md:gap-6 gap-2">
-                    <div className="flex flex-col flex-1 min-w-[180px]">
-                      <Label className="text-xs mb-1">Item Name</Label>
-                      <Input placeholder="e.g. Shelves" value={item.name} onChange={e => handleEquipmentChange(idx, 'name', e.target.value)} />
-                    </div>
-                    <div className="flex flex-col w-32">
-                      <Label className="text-xs mb-1">Cost</Label>
-                      <Input placeholder="$1000" value={item.cost} onChange={e => handleEquipmentChange(idx, 'cost', e.target.value)} />
-                    </div>
-                    <div className="flex flex-col w-32">
-                      <Label className="text-xs mb-1">Useful Life (years)</Label>
-                      <Input placeholder="e.g. 5" value={item.usefulLife || ''} onChange={e => handleEquipmentChange(idx, 'usefulLife', e.target.value)} />
-                    </div>
-                    <div className="flex flex-col w-40">
-                      <Label className="text-xs mb-1">Purchase Date</Label>
-                      <Input type="date" value={item.purchaseDate || ''} onChange={e => handleEquipmentChange(idx, 'purchaseDate', e.target.value)} title="If left blank, we'll assume you bought this at the start of your forecast." />
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-[120px]">
-                      <Label className="text-xs mb-1">Notes</Label>
-                      <Input placeholder="Optional" value={item.notes} onChange={e => handleEquipmentChange(idx, 'notes', e.target.value)} />
-                    </div>
-                    <div className="flex flex-col w-56">
-                      <Label className="text-xs mb-1">Depreciation Method</Label>
-                      <select value={item.depreciationMethod || 'straight_line'} onChange={e => handleEquipmentChange(idx, 'depreciationMethod', e.target.value as Equipment['depreciationMethod'])} className="h-10 rounded border px-2">
-                        <option value="straight_line">Straight-Line</option>
-                        <option value="double_declining">Double Declining Balance</option>
-                        <option value="sum_of_years_digits">Sum-of-the-Years'-Digits</option>
-                        <option value="units_of_production">Units of Production</option>
-                      </select>
-                    </div>
+        {hasCapitalExpenditure && (
+          <CardContent className="space-y-4 mb-10">
+            {/* Method Selection */}
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="capexInputMethod" className="font-medium">Planning Method:</Label>
+                <select 
+                  id="capexInputMethod" 
+                  value={capexInputMethod} 
+                  onChange={e => setCapexInputMethod(e.target.value as 'simple' | 'advanced')} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="simple">Simple (One-time purchases)</option>
+                  <option value="advanced">Advanced (Multi-year planning)</option>
+                </select>
+              </div>
+              {capexInputMethod === 'advanced' && (
+                <div className="flex items-center gap-2">
+                  <Label className="font-medium">Planning Years:</Label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeCapexYear}
+                      disabled={capexYears <= 2}
+                      className="h-8 w-8 p-0"
+                    >
+                      -
+                    </Button>
+                    <span className="px-3 text-sm font-medium bg-white border rounded py-1 min-w-[3rem] text-center">{capexYears}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addCapexYear}
+                      disabled={capexYears >= 10}
+                      className="h-8 w-8 p-0"
+                    >
+                      +
+                    </Button>
                   </div>
-                  {needsExtra && (
-                    <div className="border-t pt-3 mt-2 flex flex-col md:flex-row md:items-end md:gap-6 gap-2 bg-gray-50 rounded">
-                      <span className="text-xs font-semibold text-muted-foreground mb-2 md:mb-0 md:mr-4">Additional Depreciation Details:</span>
-                      {item.depreciationMethod === 'sum_of_years_digits' && (
-                        <div className="flex flex-col w-32">
-                          <Label className="text-xs mb-1">Salvage Value</Label>
-                          <Input placeholder="Optional" value={item.salvageValue || ''} onChange={e => handleEquipmentChange(idx, 'salvageValue', e.target.value)} />
+                </div>
+              )}
+            </div>
+
+            {/* Capital Expenditures List */}
+            <div className="space-y-4">
+              {capitalExpenditures.map((capex, idx) => (
+                <div key={idx} className="bg-white border rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <Input 
+                      placeholder="Asset Name (e.g. Equipment, Development, Patents)" 
+                      value={capex.name} 
+                      onChange={e => handleCapitalExpenditureChange(idx, 'name', e.target.value)} 
+                      className="w-64 font-medium"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => removeCapitalExpenditure(idx)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {capexInputMethod === 'simple' ? (
+                    <div>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Cost ($)</Label>
+                          <Input 
+                            placeholder="$5,000" 
+                            value={capex.cost} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'cost', e.target.value)} 
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Asset Type</Label>
+                          <select 
+                            value={capex.assetType} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'assetType', e.target.value)}
+                            className="w-full border rounded px-3 py-2"
+                          >
+                            <option value="tangible">Tangible Assets</option>
+                            <option value="intangible">Intangible Assets</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Useful Life (years)</Label>
+                          <Input 
+                            placeholder="5" 
+                            value={capex.usefulLife} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'usefulLife', e.target.value)} 
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Purchase Date</Label>
+                          <Input 
+                            type="date" 
+                            value={capex.purchaseDate} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'purchaseDate', e.target.value)} 
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Depreciation Method</Label>
+                          <select 
+                            value={capex.depreciationMethod || 'straight_line'} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'depreciationMethod', e.target.value)}
+                            className="w-full border rounded px-3 py-2"
+                          >
+                            <option value="straight_line">Straight-Line</option>
+                            <option value="double_declining">Double Declining Balance</option>
+                            <option value="sum_of_years_digits">Sum-of-the-Years'-Digits</option>
+                            <option value="units_of_production">Units of Production</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Additional fields for specific depreciation methods */}
+                      {(capex.depreciationMethod === 'sum_of_years_digits' || capex.depreciationMethod === 'units_of_production') && (
+                        <div className="border-t pt-3 mt-2 bg-gray-50 rounded p-3">
+                          <span className="text-xs font-semibold text-muted-foreground mb-2 block">Additional Depreciation Details:</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {capex.depreciationMethod === 'sum_of_years_digits' && (
+                              <div>
+                                <Label className="text-sm text-muted-foreground mb-1">Salvage Value ($)</Label>
+                                <Input 
+                                  placeholder="$500" 
+                                  value={capex.salvageValue || ''} 
+                                  onChange={e => handleCapitalExpenditureChange(idx, 'salvageValue', e.target.value)} 
+                                />
+                              </div>
+                            )}
+                            {capex.depreciationMethod === 'units_of_production' && (
+                              <>
+                                <div>
+                                  <Label className="text-sm text-muted-foreground mb-1">Total Expected Units</Label>
+                                  <Input 
+                                    placeholder="10,000" 
+                                    value={capex.totalUnits || ''} 
+                                    onChange={e => handleCapitalExpenditureChange(idx, 'totalUnits', e.target.value)} 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-sm text-muted-foreground mb-1">Units per Year (comma separated)</Label>
+                                  <Input 
+                                    placeholder="2000,2000,2000,2000,2000" 
+                                    value={Array.isArray(capex.unitsPerYear) ? capex.unitsPerYear.join(',') : ''} 
+                                    onChange={e => handleCapitalExpenditureChange(idx, 'unitsPerYear', e.target.value.split(',').map(s => s.trim()))} 
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
-                      {item.depreciationMethod === 'units_of_production' && (
-                        <>
-                          <div className="flex flex-col w-32">
-                            <Label className="text-xs mb-1">Total Expected Units</Label>
-                            <Input placeholder="e.g. 10000" value={item.totalUnits || ''} onChange={e => handleEquipmentChange(idx, 'totalUnits', e.target.value)} />
-                          </div>
-                          <div className="flex flex-col w-48">
-                            <Label className="text-xs mb-1">Units per Year (comma separated)</Label>
-                            <Input placeholder="e.g. 2000,2000,2000,2000,2000" value={item.unitsPerYear ? item.unitsPerYear.join(',') : ''} onChange={e => handleEquipmentChange(idx, 'unitsPerYear', e.target.value.split(','))} />
-                          </div>
-                        </>
-                      )}
-            </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Asset Type</Label>
+                          <select 
+                            value={capex.assetType} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'assetType', e.target.value)}
+                            className="w-full border rounded px-3 py-2"
+                          >
+                            <option value="intangible">Intangible Assets</option>
+                            <option value="tangible">Tangible Assets</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1">Depreciation Rate (%)</Label>
+                          <Input 
+                            placeholder="15" 
+                            value={capex.depreciationRate} 
+                            onChange={e => handleCapitalExpenditureChange(idx, 'depreciationRate', e.target.value)} 
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Year-by-year investments */}
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-2 block">Yearly Investments ($)</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                          {Array.from({ length: capexYears }, (_, i) => (
+                            <div key={i} className="flex flex-col">
+                              <Label className="text-xs text-muted-foreground mb-1">
+                                Year {i + 1} {i === 0 ? '(Initial)' : '(Addition)'}
+                              </Label>
+                              <Input 
+                                placeholder={i === 0 ? '$300,500' : '$28,500'} 
+                                value={capex.yearlyValues?.[i]?.amount || ''} 
+                                onChange={e => handleCapitalExpenditureYearlyValueChange(idx, i, e.target.value)} 
+                                className="text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )}
-              </div>
-              );
-            })}
-            <Button type="button" variant="teal" onClick={addEquipment} className="mt-2"><Plus className="w-4 h-4 mr-1" /> Add Another</Button>
+                  
+                  {/* Notes field for both methods */}
+                  <div className="mt-4">
+                    <Label className="text-sm text-muted-foreground mb-1">Notes (optional)</Label>
+                    <Input 
+                      placeholder="Additional details about this investment" 
+                      value={capex.notes} 
+                      onChange={e => handleCapitalExpenditureChange(idx, 'notes', e.target.value)} 
+                    />
+                  </div>
+                </div>
+              ))}
+              
+              <Button type="button" variant="outline" onClick={addCapitalExpenditure} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Add Another Capital Expenditure
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Dividend Payout Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            Dividend Payout
+            <Switch checked={hasDividendPayout} onCheckedChange={setHasDividendPayout} />
+          </CardTitle>
+          <div className="mt-1 mb-2">
+            <div className="font-semibold text-base">Do you plan to pay dividends to shareholders?</div>
+            <div className="text-sm text-muted-foreground">Set the percentage of net profit to be paid as dividends for each year.</div>
+          </div>
+        </CardHeader>
+        {hasDividendPayout && (
+          <CardContent className="space-y-4 mb-10">
+            {/* Dividend Payouts List */}
+            <div className="space-y-4">
+              {dividendPayouts.map((dividend, idx) => (
+                <div key={idx} className="bg-white border rounded-lg p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Year/Period</Label>
+                        <Input 
+                          placeholder={`Year ${idx + 1}${idx >= 2 ? '+' : ''}`} 
+                          value={dividend.year} 
+                          onChange={e => handleDividendPayoutChange(idx, 'year', e.target.value)} 
+                          className="font-medium"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-1">Percentage of Net Profit (%)</Label>
+                        <div className="flex items-center">
+                          <Input 
+                            placeholder="15" 
+                            value={dividend.percentage} 
+                            onChange={e => handleDividendPayoutChange(idx, 'percentage', e.target.value)} 
+                            className="text-right"
+                          />
+                          <span className="ml-2 text-sm text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => removeDividendPayout(idx)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-4"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {dividend.percentage === '0' || dividend.percentage === '' ? (
+                    <div className="text-sm text-muted-foreground">
+                      No dividends will be paid in this period
+                    </div>
+                  ) : (
+                    <div className="text-sm text-green-600">
+                      {dividend.percentage}% of net profit will be paid as dividends
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              <Button type="button" variant="outline" onClick={addDividendPayout} className="w-full">
+                <Plus className="w-4 h-4 mr-2" /> Add Another Period
+              </Button>
+            </div>
           </CardContent>
         )}
       </Card>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine, LabelList } from 'recharts';
 
 // Custom YAxis tick renderer for vertical centering
@@ -24,9 +23,9 @@ const CenteredYAxisTick = (props: any) => {
 export default function TornadoChart({ data }: { data: any }) {
   if (!Array.isArray(data) || data.length === 0) {
     return (
-      <Card className="w-full h-56 flex items-center justify-center bg-muted border border-dashed border-border text-muted-foreground">
-        <CardContent>No tornado data</CardContent>
-      </Card>
+      <div className="w-full h-56 flex items-center justify-center bg-muted border border-dashed border-border text-muted-foreground">
+        <div>No tornado data</div>
+      </div>
     );
   }
   // Prepare chart data
@@ -41,11 +40,8 @@ export default function TornadoChart({ data }: { data: any }) {
   const HIGH_COLOR = '#2dd4bf'; // teal
   const BASE_COLOR = '#2563eb'; // blue
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Tornado Chart</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full">
+      <div>
         <div className="w-full h-96">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -82,7 +78,7 @@ export default function TornadoChart({ data }: { data: any }) {
             <span className="ml-auto">Bar: DCF Value when input is flexed low/high</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

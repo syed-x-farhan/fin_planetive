@@ -82,16 +82,16 @@ const OnboardingQuestionnaire: React.FC<OnboardingQuestionnaireProps> = ({ onCom
         {/* Progress indicator */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-teal-600 font-medium">
               Question {currentStep + 1} of {questions.length}
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-teal-600 font-medium">
               {Math.round(((currentStep + 1) / questions.length) * 100)}%
             </span>
           </div>
-          <div className="w-full bg-secondary rounded-full h-1">
+          <div className="w-full bg-teal-100 rounded-full h-2">
             <div 
-              className="bg-primary h-1 rounded-full transition-all duration-500 ease-out"
+              className="bg-teal-600 h-2 rounded-full transition-all duration-500 ease-out"
               style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
             />
           </div>
@@ -101,11 +101,11 @@ const OnboardingQuestionnaire: React.FC<OnboardingQuestionnaireProps> = ({ onCom
         <Card className="animate-fade-in">
           <CardContent className="p-8">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-                <Building2 className="w-8 h-8 text-primary" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-100 rounded-full mb-4">
+                <Building2 className="w-8 h-8 text-teal-600" />
               </div>
-              <h1 className="text-3xl font-bold mb-2">{currentQuestion.title}</h1>
-              <p className="text-muted-foreground text-lg">{currentQuestion.subtitle}</p>
+              <h1 className="text-3xl font-bold mb-2 text-teal-900">{currentQuestion.title}</h1>
+              <p className="text-teal-700 text-lg">{currentQuestion.subtitle}</p>
             </div>
 
             <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -168,7 +168,7 @@ const OnboardingQuestionnaire: React.FC<OnboardingQuestionnaireProps> = ({ onCom
                     <Button
                       key={index}
                       variant="outline"
-                      className="w-full py-6 text-lg hover-scale"
+                      className="w-full py-6 text-lg hover:scale-105 transition-all duration-200 border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700 hover:text-teal-800"
                       onClick={() => handleChoice(choice.value)}
                       type="button"
                     >
@@ -184,7 +184,7 @@ const OnboardingQuestionnaire: React.FC<OnboardingQuestionnaireProps> = ({ onCom
                   <Button 
                     type="submit" 
                     size="lg" 
-                    className="px-8 hover-scale"
+                    className="px-8 hover:scale-105 transition-all duration-200 bg-teal-600 hover:bg-teal-700 text-white"
                   >
                     {isLastStep ? 'Get Started' : 'Continue'}
                     <ArrowRight className="ml-2 w-5 h-5" />
@@ -197,7 +197,7 @@ const OnboardingQuestionnaire: React.FC<OnboardingQuestionnaireProps> = ({ onCom
 
         {/* Navigation hint */}
         <div className="text-center mt-6">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-teal-600">
             Press Enter to continue or click the button
           </p>
         </div>

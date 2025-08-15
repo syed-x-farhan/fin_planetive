@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -61,9 +60,9 @@ export default function SensitivityHeatmap({ data, balanceSheetData }: { data: a
 
   if (!Array.isArray(data) || data.length === 0) {
     return (
-      <Card className="w-full h-56 flex items-center justify-center bg-muted border border-dashed border-border text-muted-foreground">
-        <CardContent>No sensitivity data</CardContent>
-      </Card>
+      <div className="w-full h-56 flex items-center justify-center bg-muted border border-dashed border-border text-muted-foreground">
+        <div>No sensitivity data</div>
+      </div>
     );
   }
 
@@ -82,11 +81,8 @@ export default function SensitivityHeatmap({ data, balanceSheetData }: { data: a
   const netDebt = calculateNetDebt();
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Sensitivity Analysis Heatmap</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full">
+      <div>
         <div className="overflow-x-auto">
           <table className="border-separate w-full text-sm" style={{ borderSpacing: 0 }}>
             <thead>
@@ -148,7 +144,7 @@ export default function SensitivityHeatmap({ data, balanceSheetData }: { data: a
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
